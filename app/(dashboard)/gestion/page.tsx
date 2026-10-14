@@ -237,7 +237,7 @@ export default function GestionPage() {
         
         {/* Breadcrumbs & Quick Header Section */}
         <div className="flex flex-col gap-space-sm mb-space-md">
-          <nav aria-label="Ruta de navegación" class="flex items-center gap-space-xs font-label-sm text-label-sm text-outline">
+          <nav aria-label="Ruta de navegación" className="flex items-center gap-space-xs font-label-sm text-label-sm text-outline">
             <Link className="hover:text-primary transition-colors flex items-center gap-1" href="/">
               <span className="material-symbols-outlined text-[16px]">home</span>
               <span>Inicio</span>
