@@ -11,12 +11,47 @@ export default function RegistroPage() {
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
     const [date, setDate] = useState('');
+  const [selectedDayOffset, setSelectedDayOffset] = useState(0);
+  const [shiftFilter, setShiftFilter] = useState<'todos' | 'mañana' | 'tarde'>('todos');
+  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
+  const [daysList, setDaysList] = useState<Array<{ name: string; dayNum: number; monthName: string; isoDate: string }>>([]);
 
   useEffect(() => {
-    setDate(new Date().toISOString().split('T')[0]);
+    const today = new Date();
+    setDate(today.toISOString().split('T')[0]);
+
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    const days = Array.from({ length: 6 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(today.getDate() + i);
+      return {
+        name: i === 0 ? 'Hoy' : dayNames[d.getDay()],
+        dayNum: d.getDate(),
+        monthName: monthNames[d.getMonth()],
+        isoDate: d.toISOString().split('T')[0]
+      };
+    });
+    setDaysList(days);
   }, []);
 
-  
+  const scheduleSlots = [
+    { id: 1, time: '08:30 AM', vet: 'Dr. Morales', service: 'Consulta General', status: 'ocupado', patient: 'Max (Labrador)', shift: 'mañana' },
+    { id: 2, time: '09:45 AM', vet: 'Dra. Gómez', service: 'Vacunación Puppy', status: 'disponible', shift: 'mañana' },
+    { id: 3, time: '11:15 AM', vet: 'Dr. Morales', service: 'Control Post-Op', status: 'disponible', shift: 'mañana' },
+    { id: 4, time: '12:30 PM', vet: 'Dra. Gómez', service: 'Triage / Urgencia', status: 'ocupado', patient: 'Kira (Poodle)', shift: 'mañana' },
+    { id: 5, time: '02:30 PM', vet: 'Dr. Morales', service: 'Profilaxis Dental', status: 'ocupado', patient: 'Thor (Bulldog)', shift: 'tarde' },
+    { id: 6, time: '04:00 PM', vet: 'Dra. Gómez', service: 'Medicina General', status: 'disponible', shift: 'tarde' },
+    { id: 7, time: '05:30 PM', vet: 'Dr. Morales', service: 'Cirugía Tejidos', status: 'reservado', patient: 'Simba (Felino)', shift: 'tarde' },
+    { id: 8, time: '06:45 PM', vet: 'Dra. Gómez', service: 'Revisión Preventiva', status: 'disponible', shift: 'tarde' }
+  ];
+
+  const filteredSlots = scheduleSlots.filter(s => {
+    if (shiftFilter === 'todos') return true;
+    return s.shift === shiftFilter;
+  });
+
   const availableServices = [
     { name: 'Medicina General', icon: '🩺' },
     { name: 'Medicina Interna', icon: '🔬' },
@@ -92,7 +127,7 @@ export default function RegistroPage() {
 {/* Main Dual Column Workspace Layout */}
 <div className="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
 {/* LEFT / CENTRAL COLUMN: Core Clinical CRM Intake Form (8 cols) */}
-<form className="xl:col-span-8 flex flex-col gap-space-lg" id="lead-form" >
+<form className="xl:col-span-8 flex flex-col gap-space-lg" id="lead-form" onSubmit={handleSave}>
 {/* CARD 1: Datos del Cliente y Paciente */}
 <div className="bg-surface-container-lowest rounded-2xl shadow-sm p-6 lg:p-space-lg relative overflow-hidden transition-all">
 {/* Subtle watermark icon */}
@@ -350,162 +385,243 @@ export default function RegistroPage() {
 </button>
 </div>
 </form>
-{/* RIGHT COLUMN: Reception Support Sidebar & Today's Follow-ups (4 cols) */}
+{/* RIGHT COLUMN: Reception Support Sidebar - Agenda & Turnos (4 cols) */}
 <aside className="xl:col-span-4 flex flex-col gap-space-lg">
-{/* Main Tracking Card: 'Seguimientos Prioritarios (Hoy)' */}
-<div className="bg-surface-container-lowest rounded-2xl shadow-sm p-5 lg:p-6 flex flex-col gap-5">
-{/* Card Header with pending badge */}
-<div className="flex items-center justify-between">
-<div className="flex items-center gap-2.5">
-<span className="material-symbols-outlined text-secondary text-[22px]">calendar_month</span>
-<h3 className="font-headline-md text-headline-md text-on-surface font-bold">Seguimientos (Hoy)</h3>
-</div>
-<span className="px-2.5 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
-              4 pendientes
+{/* Main Card: Agenda y Turnos */}
+<div className="bg-surface-container-lowest rounded-2xl shadow-sm p-5 lg:p-6 flex flex-col gap-4">
+  
+  {/* Header */}
+  <div className="flex items-center justify-between pb-2 border-b border-surface-container-low">
+    <div className="flex items-center gap-2.5">
+      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+        <span className="material-symbols-outlined text-[22px]">calendar_month</span>
+      </div>
+      <div className="flex flex-col">
+        <h3 className="font-headline-md text-headline-md text-on-surface font-bold leading-tight">Agenda Clínica</h3>
+        <span className="font-body-sm text-[12px] text-on-surface-variant">Disponibilidad médica en vivo</span>
+      </div>
+    </div>
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-container/20 text-tertiary font-label-sm text-[11px] font-semibold">
+      <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+      Cupos abiertos
+    </span>
+  </div>
+
+  {/* 6-Day Interactive Mini-Calendar Strip */}
+  <div className="flex flex-col gap-2 pt-1">
+    <div className="flex items-center justify-between">
+      <span className="font-label-sm text-label-sm text-on-surface font-bold">Octubre 2026</span>
+      <span className="text-[11px] text-outline">Selecciona un día</span>
+    </div>
+    <div className="grid grid-cols-6 gap-1.5">
+      {daysList.map((d, index) => {
+        const isSelected = selectedDayOffset === index;
+        return (
+          <button
+            key={d.isoDate || index}
+            type="button"
+            onClick={() => {
+              setSelectedDayOffset(index);
+              setDate(d.isoDate);
+              setSelectedSlotId(null);
+              showToast(`📅 Día seleccionado: ${d.name} ${d.dayNum} ${d.monthName}`);
+            }}
+            className={`flex flex-col items-center py-2 px-1 rounded-xl transition-all text-center relative ${
+              isSelected
+                ? 'bg-gradient-to-b from-primary to-primary-container text-on-primary shadow-sm font-bold scale-[1.03]'
+                : 'bg-surface-container-low/70 hover:bg-surface-container text-on-surface-variant'
+            }`}
+          >
+            <span className={`text-[11px] uppercase font-semibold ${isSelected ? 'text-on-primary/90' : 'text-outline'}`}>
+              {d.name}
             </span>
-</div>
-<p className="font-body-sm text-body-sm text-on-surface-variant -mt-2">
-            Mascotas agendadas para contacto en el turno actual
-          </p>
-{/* List of Actionable Mini-Cards */}
-<div className="flex flex-col gap-3">
-{/* Caso 1: Simba */}
-<div className="p-3.5 rounded-xl bg-surface-container-low/70 hover:bg-surface-container-low transition-all flex flex-col gap-2.5 shadow-xs">
-<div className="flex items-start justify-between gap-2">
-<div className="flex items-center gap-3">
-<div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-xl shadow-inner">
-                    🐱
-                  </div>
-<div className="flex flex-col min-w-0">
-<div className="flex items-center gap-1.5">
-<span className="font-label-lg text-label-lg text-on-surface font-bold">Simba</span>
-<span className="font-body-sm text-body-sm text-outline">• 2 años</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant truncate">Tutor: Lucía Fernández</span>
-</div>
-</div>
-<button className="w-8 h-8 rounded-lg bg-surface-container-lowest text-primary hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center shadow-xs" title="Llamar a tutor" type="button" onClick={() => showToast('Iniciando llamada con tutor...')}>
-<span className="material-symbols-outlined text-[17px]">call</span>
-</button>
-</div>
-<div className="flex items-center justify-between pt-1">
-<div className="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-<span className="material-symbols-outlined text-[15px] text-outline">vaccines</span>
-<span>Vacuna Triple Felina</span>
-</div>
-<span className="px-2 py-0.5 rounded-md bg-secondary-fixed text-on-secondary-fixed font-label-sm text-[11px] font-semibold">
-                  Llamada pendiente
+            <span className={`text-base font-bold leading-tight ${isSelected ? 'text-on-primary' : 'text-on-surface'}`}>
+              {d.dayNum}
+            </span>
+            <span className={`w-1.5 h-1.5 rounded-full mt-1 ${isSelected ? 'bg-on-primary' : (index % 2 === 0 ? 'bg-tertiary' : 'bg-primary')}`}></span>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+
+  {/* Turno Filter Chips */}
+  <div className="flex items-center justify-between border-t border-b border-surface-container-low py-2.5">
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => setShiftFilter('todos')}
+        className={`px-2.5 py-1 rounded-lg text-[11px] font-label-sm transition-all ${
+          shiftFilter === 'todos'
+            ? 'bg-primary text-on-primary font-bold'
+            : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
+        }`}
+      >
+        Todos
+      </button>
+      <button
+        type="button"
+        onClick={() => setShiftFilter('mañana')}
+        className={`px-2.5 py-1 rounded-lg text-[11px] font-label-sm flex items-center gap-1 transition-all ${
+          shiftFilter === 'mañana'
+            ? 'bg-primary text-on-primary font-bold'
+            : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
+        }`}
+      >
+        <span>☀️</span> Mañana
+      </button>
+      <button
+        type="button"
+        onClick={() => setShiftFilter('tarde')}
+        className={`px-2.5 py-1 rounded-lg text-[11px] font-label-sm flex items-center gap-1 transition-all ${
+          shiftFilter === 'tarde'
+            ? 'bg-primary text-on-primary font-bold'
+            : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
+        }`}
+      >
+        <span>🌙</span> Tarde
+      </button>
+    </div>
+    <span className="text-[11px] text-outline font-label-sm">
+      {filteredSlots.filter(s => s.status === 'disponible').length} disponibles
+    </span>
+  </div>
+
+  {/* Turnos / Slots List */}
+  <div className="flex flex-col gap-2 max-h-[380px] overflow-y-auto pr-0.5">
+    {filteredSlots.map(slot => {
+      const isAssigned = selectedSlotId === slot.id;
+      return (
+        <div
+          key={slot.id}
+          className={`p-3 rounded-xl transition-all border flex items-center justify-between gap-3 ${
+            isAssigned
+              ? 'bg-primary-fixed/25 border-primary shadow-xs'
+              : slot.status === 'disponible'
+              ? 'bg-surface-container-low/70 hover:bg-surface-container border-transparent'
+              : 'bg-surface-container-low/30 border-transparent opacity-75'
+          }`}
+        >
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+              isAssigned
+                ? 'bg-primary text-on-primary'
+                : slot.status === 'disponible'
+                ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant'
+                : 'bg-surface-container text-outline'
+            }`}>
+              <span className="material-symbols-outlined text-[17px]">
+                {slot.status === 'disponible' ? 'schedule' : 'event_busy'}
+              </span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-label-md text-label-md text-on-surface font-bold">
+                  {slot.time}
                 </span>
-</div>
-</div>
-{/* Caso 2: Thor */}
-<div className="p-3.5 rounded-xl bg-surface-container-low/70 hover:bg-surface-container-low transition-all flex flex-col gap-2.5 shadow-xs">
-<div className="flex items-start justify-between gap-2">
-<div className="flex items-center gap-3">
-<div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-xl shadow-inner">
-                    🐶
-                  </div>
-<div className="flex flex-col min-w-0">
-<div className="flex items-center gap-1.5">
-<span className="font-label-lg text-label-lg text-on-surface font-bold">Thor</span>
-<span className="font-body-sm text-body-sm text-outline">• Bulldog</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant truncate">Tutor: Mateo Rivas</span>
-</div>
-</div>
-<button className="w-8 h-8 rounded-lg bg-surface-container-lowest text-tertiary hover:bg-tertiary hover:text-on-tertiary transition-all flex items-center justify-center shadow-xs" title="Abrir WhatsApp" type="button" onClick={() => showToast('Abriendo conversación de WhatsApp...')}>
-<span className="material-symbols-outlined text-[17px]">chat</span>
-</button>
-</div>
-<div className="flex items-center justify-between pt-1">
-<div className="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-<span className="material-symbols-outlined text-[15px] text-outline">healing</span>
-<span>Revisión herida quirúrgica</span>
-</div>
-<span className="px-2 py-0.5 rounded-md bg-tertiary-fixed text-on-tertiary-fixed-variant font-label-sm text-[11px] font-semibold flex items-center gap-1">
-<span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
-                  Confirmado 16:30
+                <span className="text-outline text-[11px]">• {slot.vet}</span>
+              </div>
+              <span className="text-body-sm text-[12px] text-on-surface-variant truncate">
+                {slot.service}
+              </span>
+              {slot.patient && (
+                <span className="text-[11px] text-outline truncate">
+                  Paciente: <strong className="font-medium text-on-surface">{slot.patient}</strong>
                 </span>
+              )}
+            </div>
+          </div>
+
+          {/* Action button / Badge */}
+          <div className="shrink-0">
+            {slot.status === 'disponible' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const dayObj = daysList[selectedDayOffset];
+                  if (dayObj) setDate(dayObj.isoDate);
+                  setSelectedSlotId(slot.id);
+                  showToast(`✅ Turno ${slot.time} (${slot.vet}) asignado a seguimiento`);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-label-sm font-semibold transition-all flex items-center gap-1 ${
+                  isAssigned
+                    ? 'bg-primary text-on-primary shadow-xs'
+                    : 'bg-tertiary-container/30 text-tertiary hover:bg-tertiary hover:text-on-tertiary'
+                }`}
+              >
+                {isAssigned ? (
+                  <>
+                    <span className="material-symbols-outlined text-[14px]">check</span>
+                    <span>Asignado</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    <span>Asignar</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <span className="px-2 py-0.5 rounded-md bg-surface-container text-outline text-[10px] font-label-sm font-medium">
+                {slot.status === 'ocupado' ? 'Ocupado' : 'Reservado'}
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+
+  {/* Métrica Rápida del Día */}
+  <div className="p-4 rounded-xl bg-surface-container-low flex flex-col gap-2.5 mt-1">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-1.5">
+        <span className="material-symbols-outlined text-primary text-[18px]">trending_up</span>
+        <span className="font-label-md text-label-md text-on-surface font-bold">Oportunidades Hoy</span>
+      </div>
+      <span className="font-label-md text-label-md text-primary font-bold">12 registradas</span>
+    </div>
+    <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+      <div className="bg-gradient-to-r from-primary to-tertiary h-full rounded-full transition-all duration-700" style={{"width":"85%"}}></div>
+    </div>
+    <div className="flex items-center justify-between text-body-sm text-[11px] text-outline">
+      <span>85% contactadas con éxito</span>
+      <span className="text-tertiary font-semibold">Meta diaria: 15</span>
+    </div>
+  </div>
 </div>
-</div>
-{/* Caso 3: Kira */}
-<div className="p-3.5 rounded-xl bg-surface-container-low/70 hover:bg-surface-container-low transition-all flex flex-col gap-2.5 shadow-xs">
-<div className="flex items-start justify-between gap-2">
-<div className="flex items-center gap-3">
-<div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-xl shadow-inner">
-                    🐶
-                  </div>
-<div className="flex flex-col min-w-0">
-<div className="flex items-center gap-1.5">
-<span className="font-label-lg text-label-lg text-on-surface font-bold">Kira</span>
-<span className="font-body-sm text-body-sm text-outline">• Poodle</span>
-</div>
-<span className="font-body-sm text-body-sm text-on-surface-variant truncate">Tutor: Andrea Gómez</span>
-</div>
-</div>
-<button className="w-8 h-8 rounded-lg bg-surface-container-lowest text-primary hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center shadow-xs" title="Llamar o agendar" type="button" onClick={() => showToast('Iniciando llamada...')}>
-<span className="material-symbols-outlined text-[17px]">phone_forwarded</span>
-</button>
-</div>
-<div className="flex items-center justify-between pt-1">
-<div className="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-<span className="material-symbols-outlined text-[15px] text-outline">dentistry</span>
-<span>Presupuesto profilaxis dental</span>
-</div>
-<span className="px-2 py-0.5 rounded-md bg-surface-container-high text-on-surface-variant font-label-sm text-[11px] font-semibold">
-                  Por contactar
-                </span>
-</div>
-</div>
-</div>
-{/* Métrica Rápida del Día */}
-<div className="p-4 rounded-xl bg-surface-container-low flex flex-col gap-2.5">
-<div className="flex items-center justify-between">
-<div className="flex items-center gap-1.5">
-<span className="material-symbols-outlined text-primary text-[18px]">trending_up</span>
-<span className="font-label-md text-label-md text-on-surface font-bold">Oportunidades Hoy</span>
-</div>
-<span className="font-label-md text-label-md text-primary font-bold">12 registradas</span>
-</div>
-<div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-<div className="bg-gradient-to-r from-primary to-tertiary h-full rounded-full transition-all duration-700" style={{"width":"85%"}}></div>
-</div>
-<div className="flex items-center justify-between text-body-sm text-[11px] text-outline">
-<span>85% contactadas con éxito</span>
-<span className="text-tertiary font-semibold">Meta diaria: 15</span>
-</div>
-</div>
-</div>
+
 {/* Receptionist Tip / Reminder Banner */}
 <div className="p-4 rounded-2xl bg-gradient-to-br from-secondary-fixed/20 to-surface-container-lowest shadow-sm flex items-start gap-3">
-<div className="w-8 h-8 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
-<span className="material-symbols-outlined text-[18px]">lightbulb</span>
+  <div className="w-8 h-8 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
+    <span className="material-symbols-outlined text-[18px]">lightbulb</span>
+  </div>
+  <div className="flex flex-col gap-0.5">
+    <span className="font-label-md text-label-md text-on-surface font-bold">Tip de Recepción</span>
+    <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+      Recuerda solicitar si el paciente cuenta con carnet de vacunación vigente o alergias a antibióticos previas.
+    </p>
+  </div>
 </div>
-<div className="flex flex-col gap-0.5">
-<span className="font-label-md text-label-md text-on-surface font-bold">Tip de Recepción</span>
-<p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Recuerda solicitar si el paciente cuenta con carnet de vacunación vigente o alergias a antibióticos previas.
-            </p>
-</div>
-</div>
+
 {/* Activity snippet mini-feed */}
 <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-sm flex flex-col gap-3">
-<div className="flex items-center justify-between">
-<span className="font-label-md text-label-md text-on-surface font-bold flex items-center gap-1.5">
-<span className="material-symbols-outlined text-[16px] text-outline">schedule</span>
-              Último registro
-            </span>
-<span className="font-label-sm text-label-sm text-outline">Hace 14 min</span>
-</div>
-<div className="flex items-center gap-3">
-<div className="w-9 h-9 rounded-full bg-primary-fixed/40 flex items-center justify-center text-primary font-bold text-label-sm">
-              RL
-            </div>
-<div className="flex flex-col min-w-0">
-<span className="font-label-md text-label-md text-on-surface truncate">Rocky (Golden Retriever)</span>
-<span className="font-body-sm text-[11px] text-outline truncate">Tutor: Roberto Luna • Derivación trauma</span>
-</div>
-</div>
+  <div className="flex items-center justify-between">
+    <span className="font-label-md text-label-md text-on-surface font-bold flex items-center gap-1.5">
+      <span className="material-symbols-outlined text-[16px] text-outline">schedule</span>
+      Último registro
+    </span>
+    <span className="font-label-sm text-label-sm text-outline">Hace 14 min</span>
+  </div>
+  <div className="flex items-center gap-3">
+    <div className="w-9 h-9 rounded-full bg-primary-fixed/40 flex items-center justify-center text-primary font-bold text-label-sm">
+      RL
+    </div>
+    <div className="flex flex-col min-w-0">
+      <span className="font-label-md text-label-md text-on-surface truncate">Rocky (Golden Retriever)</span>
+      <span className="font-body-sm text-[11px] text-outline truncate">Tutor: Roberto Luna • Derivación trauma</span>
+    </div>
+  </div>
 </div>
 </aside>
 </div>
