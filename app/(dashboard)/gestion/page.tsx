@@ -9,8 +9,7 @@ interface Opportunity {
   id: number;
   tutor: string;
   pet: string;
-  species: 'Canino' | 'Felino' | 'Exótico';
-  age: string;
+  species: 'Canino' | 'Felino' | 'Otro' | 'Exótico';
   phone: string;
   service: string;
   opportunityType: string;
@@ -20,95 +19,9 @@ interface Opportunity {
   status: 'Pendiente' | 'En Proceso' | 'Cita Agendada' | 'Consulta Concretada' | 'Rechazado';
 }
 
-const initialOpportunities: Opportunity[] = [
-  {
-    id: 1,
-    tutor: 'Juan Pérez',
-    pet: 'Firulais',
-    species: 'Canino',
-    age: '3a',
-    phone: '300 123 4567',
-    service: 'Medicina General',
-    opportunityType: 'Cita no concretada',
-    notes: 'Por costo de consulta inicial. Interesado en paquete preventivo.',
-    proposedDate: 'Hoy - 16:00 hrs',
-    isToday: true,
-    status: 'Pendiente'
-  },
-  {
-    id: 2,
-    tutor: 'Mariana Palacios',
-    pet: 'Misi',
-    species: 'Felino',
-    age: '5a',
-    phone: '312 984 2190',
-    service: 'Medicina Interna',
-    opportunityType: 'Inasistencia a control',
-    notes: 'Paciente presentó mejoría temporal, tutor quiere reevaluar examen coprológico.',
-    proposedDate: '14/Oct/2026',
-    isToday: false,
-    status: 'En Proceso'
-  },
-  {
-    id: 3,
-    tutor: 'Carlos Méndez',
-    pet: 'Rocky',
-    species: 'Canino',
-    age: '1a',
-    phone: '315 432 9876',
-    service: 'Vacunación & Desp.',
-    opportunityType: 'Seguimiento anual',
-    notes: 'Tutor solicitó recordatorio por WhatsApp un día antes del horario matutino.',
-    proposedDate: '15/Oct/2026',
-    isToday: false,
-    status: 'Cita Agendada'
-  },
-  {
-    id: 4,
-    tutor: 'Camila Restrepo',
-    pet: 'Luna',
-    species: 'Felino',
-    age: '4a',
-    phone: '315 776 5432',
-    service: 'Odontología Profilaxis',
-    opportunityType: 'Presupuesto enviado',
-    notes: 'Consulta financiamiento en cuotas sin interés para profilaxis dental grado 2.',
-    proposedDate: '16/Oct/2026',
-    isToday: false,
-    status: 'Pendiente'
-  },
-  {
-    id: 5,
-    tutor: 'Roberto Luna',
-    pet: 'Balto',
-    species: 'Canino',
-    age: '7a',
-    phone: '301 555 4321',
-    service: 'Cirugía Menor',
-    opportunityType: 'Evaluación prequirúrgica',
-    notes: 'Confirmó cita con Dr. Valenzuela para anestesiología y hemograma.',
-    proposedDate: '14/Oct/2026',
-    isToday: false,
-    status: 'Consulta Concretada'
-  },
-  {
-    id: 6,
-    tutor: 'Andrea Gómez',
-    pet: 'Kira',
-    species: 'Canino',
-    age: '2a',
-    phone: '318 223 9911',
-    service: 'Medicina General',
-    opportunityType: 'Derivación externa',
-    notes: 'Decidió atenderse en clínica de su barrio por cercanía geográfica.',
-    proposedDate: '12/Oct/2026',
-    isToday: false,
-    status: 'Rechazado'
-  }
-];
-
 export default function GestionPage() {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeStatusTab, setActiveStatusTab] = useState<string>('todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [dateFilter, setDateFilter] = useState<'todos' | 'hoy' | 'semana'>('todos');
@@ -130,31 +43,32 @@ export default function GestionPage() {
 
   useEffect(() => {
     async function loadData() {
+      setIsLoading(true);
       if (isSupabaseConfigured()) {
         try {
           const dbData = await obtenerOportunidades();
-          if (dbData && dbData.length > 0) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const mapped: Opportunity[] = dbData.map((d) => ({
-              id: d.id,
-              tutor: d.pacientes?.nombre_tutor || 'Tutor',
-              pet: d.pacientes?.nombre_paciente || 'Mascota',
-              species: (d.pacientes?.especie as 'Canino' | 'Felino' | 'Exótico') || 'Canino',
-              age: 'Adulto',
-              phone: d.pacientes?.telefono || '',
-              service: d.servicio_interes,
-              opportunityType: d.tipo_oportunidad,
-              notes: d.resultado_gestion || d.motivo || d.observaciones || 'Sin notas registradas',
-              proposedDate: d.fecha_propuesta_seguimiento || 'Sin fecha',
-              isToday: d.fecha_propuesta_seguimiento === todayStr,
-              status: d.estado === 'En Gestión' ? 'En Proceso' : (d.estado as Opportunity['status']),
-            }));
-            setOpportunities(mapped);
-          }
+          const todayStr = new Date().toLocaleDateString('en-CA');
+          const mapped: Opportunity[] = dbData.map((d) => ({
+            id: d.id,
+            tutor: d.pacientes?.nombre_tutor || 'Tutor',
+            pet: d.pacientes?.nombre_paciente || 'Mascota',
+            species: (d.pacientes?.especie as Opportunity['species']) || 'Canino',
+            phone: d.pacientes?.telefono || '',
+            service: d.servicio_interes,
+            opportunityType: d.tipo_oportunidad,
+            notes: d.resultado_gestion || d.motivo || d.observaciones || 'Sin notas registradas',
+            proposedDate: d.fecha_propuesta_seguimiento || 'Sin fecha',
+            isToday: d.fecha_propuesta_seguimiento === todayStr,
+            status: d.estado === 'En Gestión' ? 'En Proceso' : (d.estado as Opportunity['status']),
+          }));
+          setOpportunities(mapped);
         } catch (e) {
           console.error('Error cargando de Supabase:', e);
         }
+      } else {
+        setOpportunities([]);
       }
+      setIsLoading(false);
     }
     loadData();
   }, []);
@@ -189,6 +103,15 @@ export default function GestionPage() {
 
       // Date filter
       if (dateFilter === 'hoy' && !item.isToday) return false;
+      if (dateFilter === 'semana') {
+        if (!item.proposedDate || item.proposedDate === 'Sin fecha') return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const weekAhead = new Date(today);
+        weekAhead.setDate(today.getDate() + 7);
+        const itemDate = new Date(item.proposedDate + 'T00:00:00');
+        if (isNaN(itemDate.getTime()) || itemDate < today || itemDate > weekAhead) return false;
+      }
 
       // Search query
       if (searchQuery.trim() !== '') {
@@ -270,13 +193,12 @@ export default function GestionPage() {
 
   // Export to CSV (RF-04)
   const handleExportCSV = () => {
-    const headers = ['ID', 'Tutor', 'Mascota', 'Especie', 'Edad', 'Telefono', 'Servicio', 'Tipo_Oportunidad', 'Motivo_Notas', 'Fecha_Propuesta', 'Estado'];
+    const headers = ['ID', 'Tutor', 'Mascota', 'Especie', 'Telefono', 'Servicio', 'Tipo_Oportunidad', 'Motivo_Notas', 'Fecha_Propuesta', 'Estado'];
     const rows = opportunities.map(o => [
       o.id,
       `"${o.tutor}"`,
       `"${o.pet}"`,
       `"${o.species}"`,
-      `"${o.age}"`,
       `"${o.phone}"`,
       `"${o.service}"`,
       `"${o.opportunityType}"`,
@@ -617,7 +539,7 @@ export default function GestionPage() {
                             </span>
                             <span className="w-1 h-1 rounded-full bg-outline-variant"></span>
                             <span className="font-body-sm text-body-sm text-outline text-[11px]">
-                              {item.species} • {item.age}
+                              {item.species}
                             </span>
                           </div>
                         </div>
@@ -715,7 +637,32 @@ export default function GestionPage() {
                   </tr>
                 ))}
 
-                {filteredList.length === 0 && (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-on-surface-variant">
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="material-symbols-outlined text-4xl text-primary animate-spin">sync</span>
+                        <p className="font-label-lg font-bold">Cargando oportunidades desde Supabase...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : opportunities.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-on-surface-variant">
+                      <div className="flex flex-col items-center gap-3">
+                        <span className="material-symbols-outlined text-4xl text-primary/60">inbox</span>
+                        <p className="font-label-lg font-bold">No hay oportunidades registradas todavía</p>
+                        <p className="font-body-sm text-body-sm text-outline">Los registros que captures en la recepción aparecerán aquí automáticamente.</p>
+                        <Link
+                          href="/registro"
+                          className="mt-1 px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md text-label-md font-semibold shadow-sm hover:bg-primary-container transition-all"
+                        >
+                          + Registrar primera oportunidad
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredList.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-on-surface-variant">
                       <div className="flex flex-col items-center gap-2">

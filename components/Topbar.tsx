@@ -3,16 +3,44 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { buscarPacientesYOportunidades, ResultadoBusqueda } from '@/lib/db';
+import { buscarPacientesYOportunidades, obtenerOportunidades, ResultadoBusqueda } from '@/lib/db';
+
+interface Notificacion {
+  id: number;
+  title: string;
+  message: string;
+  time: string;
+  unread: boolean;
+  petName?: string;
+}
 
 export default function Topbar() {
   const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Recordatorio', message: 'Llamar a tutor de Firulais a las 16:00', time: 'Hace 5 min', unread: true },
-    { id: 2, title: 'Seguimiento pendiente', message: 'Revisar bandeja de Llamadas de Hoy', time: 'Hace 1 hora', unread: true },
-    { id: 3, title: 'Sistema', message: 'Integración con Supabase lista para usar', time: 'Hoy', unread: false }
-  ]);
+  const [notifications, setNotifications] = useState<Notificacion[]>([]);
+
+  useEffect(() => {
+    async function loadNotifications() {
+      const oportunidades = await obtenerOportunidades();
+      const todayStr = new Date().toLocaleDateString('en-CA');
+      const pendientes = oportunidades.filter(
+        (o) =>
+          (o.estado === 'Pendiente' || o.estado === 'En Gestión') &&
+          (o.fecha_propuesta_seguimiento === todayStr || o.estado === 'Pendiente')
+      );
+
+      const items: Notificacion[] = pendientes.slice(0, 6).map((o) => ({
+        id: o.id,
+        title: o.fecha_propuesta_seguimiento === todayStr ? 'Llamada de Hoy' : 'Caso Pendiente',
+        message: `Contactar a ${o.pacientes?.nombre_tutor || 'Tutor'} (paciente ${o.pacientes?.nombre_paciente || 'Mascota'}) — ${o.servicio_interes}`,
+        time: o.fecha_propuesta_seguimiento === todayStr ? 'Hoy' : (o.fecha_propuesta_seguimiento || 'Sin fecha'),
+        unread: true,
+        petName: o.pacientes?.nombre_paciente,
+      }));
+      setNotifications(items);
+    }
+    loadNotifications();
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ResultadoBusqueda[]>([]);
@@ -172,7 +200,18 @@ export default function Topbar() {
               </div>
               <div className="flex flex-col max-h-80 overflow-y-auto">
                 {notifications.map(notif => (
-                  <div key={notif.id} className={`p-4 border-b border-surface-container-low/50 hover:bg-surface-container-low/50 transition-colors cursor-pointer ${notif.unread ? 'bg-primary-fixed/10' : ''}`}>
+                  <div
+                    key={notif.id}
+                    onClick={() => {
+                      setShowNotifications(false);
+                      if (notif.petName) {
+                        router.push(`/gestion?q=${encodeURIComponent(notif.petName)}`);
+                      } else {
+                        router.push('/gestion');
+                      }
+                    }}
+                    className={`p-4 border-b border-surface-container-low/50 hover:bg-surface-container-low/50 transition-colors cursor-pointer ${notif.unread ? 'bg-primary-fixed/10' : ''}`}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <span className="font-label-md text-label-md text-on-surface font-semibold">{notif.title}</span>
                       <span className="font-label-sm text-label-sm text-outline whitespace-nowrap text-[11px]">{notif.time}</span>

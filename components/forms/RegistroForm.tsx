@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Phone, Dog, Calendar, Stethoscope, ClipboardList, Info, MessageSquare, CheckCircle2, ChevronDown, Database, AlertCircle } from 'lucide-react';
+import { User, Phone, Dog, Calendar, Stethoscope, ClipboardList, Info, MessageSquare, CheckCircle2, ChevronDown, AlertCircle } from 'lucide-react';
 import { crearOportunidad, NuevoRegistroPayload } from '@/lib/db';
-import { isSupabaseConfigured } from '@/lib/supabaseClient';
 
 export default function RegistroForm() {
   const [formData, setFormData] = useState({
@@ -34,12 +33,7 @@ export default function RegistroForm() {
     setErrorMessage('');
 
     try {
-      if (isSupabaseConfigured()) {
-        await crearOportunidad(formData as NuevoRegistroPayload);
-      } else {
-        // Demostración local si aún no se han configurado las claves de Supabase
-        await new Promise((resolve) => setTimeout(resolve, 800));
-      }
+      await crearOportunidad(formData as NuevoRegistroPayload);
 
       setIsSubmitting(false);
       setSuccess(true);

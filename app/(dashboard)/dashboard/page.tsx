@@ -6,30 +6,30 @@ import { obtenerMetricasDashboard, MetricasDashboard } from '@/lib/db';
 import { isSupabaseConfigured } from '@/lib/supabaseClient';
 
 export default function DashboardPage() {
-  const [syncTime, setSyncTime] = useState('Hoy a las 11:45 AM');
+  const [syncTime, setSyncTime] = useState('Sincronizando...');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [periodFilter, setPeriodFilter] = useState('este_mes');
+  const [daysFilter, setDaysFilter] = useState<number>(0);
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [isLiveFromDb, setIsLiveFromDb] = useState(false);
 
   const [metrics, setMetrics] = useState<MetricasDashboard>({
-    total_identificadas: 124,
-    total_gestionadas: 89,
-    citas_generadas: 42,
-    consultas_concretadas: 28,
-    pacientes_recuperados: 18,
-    consultas_general: 16,
-    consultas_interna: 12,
-    pendientes: 35,
+    total_identificadas: 0,
+    total_gestionadas: 0,
+    citas_generadas: 0,
+    consultas_concretadas: 0,
+    pacientes_recuperados: 0,
+    consultas_general: 0,
+    consultas_interna: 0,
+    pendientes: 0,
     en_gestion: 0,
-    rechazados: 19,
+    rechazados: 0,
   });
 
-  const loadData = async () => {
+  const loadData = async (dias: number = daysFilter) => {
     if (isSupabaseConfigured()) {
       try {
-        const dbData = await obtenerMetricasDashboard();
+        const dbData = await obtenerMetricasDashboard(dias);
         setMetrics(dbData);
         setIsLiveFromDb(true);
       } catch (err) {
@@ -41,7 +41,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const now = new Date();
     setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-    loadData();
+    loadData(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const showToast = (msg: string) => {
@@ -52,11 +53,11 @@ export default function DashboardPage() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await loadData();
+    await loadData(daysFilter);
     setIsRefreshing(false);
     const now = new Date();
     setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-    showToast(isSupabaseConfigured() ? '🔄 Métricas sincronizadas con Supabase (PostgreSQL)' : '🔄 Métricas actualizadas (Modo Demo)');
+    showToast(isSupabaseConfigured() ? '🔄 Métricas sincronizadas con Supabase (PostgreSQL)' : '⚠️ Supabase no configurado');
   };
 
   const handlePrint = () => {
@@ -187,30 +188,21 @@ export default function DashboardPage() {
               {/* Date range selector */}
               <div className="relative">
                 <select 
-                  value={periodFilter}
-                  onChange={(e) => {
-                    setPeriodFilter(e.target.value);
+                  value={daysFilter}
+                  onChange={async (e) => {
+                    const dias = Number(e.target.value);
+                    setDaysFilter(dias);
+                    await loadData(dias);
                     showToast('Filtro de periodo actualizado');
                   }}
                   className="appearance-none bg-surface-container-low text-on-surface font-label-md text-label-md pl-9 pr-8 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer transition-all"
                 >
-                  <option value="este_mes">Este Mes (Octubre)</option>
-                  <option value="mes_anterior">Mes Anterior (Septiembre)</option>
-                  <option value="trimestre">Trimestre Actual</option>
-                  <option value="año">Año 2026</option>
+                  <option value={0}>Histórico Completo</option>
+                  <option value={30}>Últimos 30 días</option>
+                  <option value={14}>Últimos 14 días</option>
+                  <option value={7}>Últimos 7 días</option>
                 </select>
                 <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-primary text-[18px] pointer-events-none">calendar_month</span>
-                <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-outline text-[16px] pointer-events-none">expand_more</span>
-              </div>
-
-              {/* Scope filter */}
-              <div className="relative">
-                <select className="appearance-none bg-surface-container-low text-on-surface font-label-md text-label-md pl-9 pr-8 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer transition-all">
-                  <option>Últimos 30 días</option>
-                  <option>Últimos 14 días</option>
-                  <option>Últimos 7 días</option>
-                </select>
-                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">history</span>
                 <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-outline text-[16px] pointer-events-none">expand_more</span>
               </div>
 
@@ -242,7 +234,7 @@ export default function DashboardPage() {
                 <div className="mt-4 flex items-baseline justify-between">
                   <span className="font-display-lg text-display-lg font-bold text-on-surface">{metrics.total_identificadas}</span>
                   <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-tertiary-fixed/30 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">
-                    <span className="material-symbols-outlined text-[14px]">arrow_upward</span>+14%
+                    {metrics.pendientes} pendientes
                   </span>
                 </div>
                 <div className="mt-2 text-on-surface-variant font-body-sm text-body-sm">
@@ -284,8 +276,8 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className="mt-2 text-on-surface-variant font-body-sm text-body-sm flex items-center gap-1">
-                  <span className="material-symbols-outlined text-primary text-[14px]">trending_up</span>
-                  <span>+6 citas sobre meta mensual</span>
+                  <span className="material-symbols-outlined text-primary text-[14px]">event</span>
+                  <span>Citas programadas en agenda</span>
                 </div>
               </div>
 
@@ -556,15 +548,19 @@ export default function DashboardPage() {
                 <div className="bg-surface-container-low/50 p-3.5 rounded-xl flex items-center gap-3">
                   <span className="material-symbols-outlined text-tertiary text-[24px]">speed</span>
                   <div>
-                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">Velocidad de Contacto</span>
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">18 min</span>
+                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">Tasa de Gestión</span>
+                    <span className="font-headline-md text-headline-md font-bold text-on-surface">
+                      {metrics.total_identificadas > 0 ? ((metrics.total_gestionadas / metrics.total_identificadas) * 100).toFixed(1) : '0.0'}%
+                    </span>
                   </div>
                 </div>
                 <div className="bg-surface-container-low/50 p-3.5 rounded-xl flex items-center gap-3">
                   <span className="material-symbols-outlined text-secondary text-[24px]">assignment_turned_in</span>
                   <div>
-                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">Cumplimiento Agenda</span>
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">94.8%</span>
+                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">Cierre Clínico</span>
+                    <span className="font-headline-md text-headline-md font-bold text-on-surface">
+                      {metrics.total_identificadas > 0 ? ((metrics.consultas_concretadas / metrics.total_identificadas) * 100).toFixed(1) : '0.0'}%
+                    </span>
                   </div>
                 </div>
               </div>

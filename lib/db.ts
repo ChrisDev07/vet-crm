@@ -83,6 +83,7 @@ export async function crearOportunidad(payload: NuevoRegistroPayload) {
     .insert([
       {
         paciente_id: pacienteData.id,
+        fecha_registro: new Date().toLocaleDateString('en-CA'),
         servicio_interes: payload.servicio_interes,
         tipo_oportunidad: payload.tipo_oportunidad,
         motivo: payload.motivo?.trim() || null,
@@ -173,7 +174,7 @@ export async function actualizarEstadoOportunidad(
 /**
  * Obtiene las 7 métricas del plan de mejoramiento directamente desde PostgreSQL
  */
-export async function obtenerMetricasDashboard(): Promise<MetricasDashboard> {
+export async function obtenerMetricasDashboard(dias?: number): Promise<MetricasDashboard> {
   const emptyMetrics: MetricasDashboard = {
     total_identificadas: 0,
     total_gestionadas: 0,
@@ -191,9 +192,18 @@ export async function obtenerMetricasDashboard(): Promise<MetricasDashboard> {
     return emptyMetrics;
   }
 
-  const { data: rows, error } = await supabase
+  let query = supabase
     .from('oportunidades')
-    .select('estado, servicio_interes, tipo_oportunidad');
+    .select('estado, servicio_interes, tipo_oportunidad, fecha_registro');
+
+  if (dias && dias > 0) {
+    const since = new Date();
+    since.setDate(since.getDate() - dias);
+    const sinceStr = since.toLocaleDateString('en-CA');
+    query = query.gte('fecha_registro', sinceStr);
+  }
+
+  const { data: rows, error } = await query;
 
   if (error || !rows) {
     console.error('Error al obtener métricas:', error);
@@ -300,20 +310,5 @@ export async function buscarPacientesYOportunidades(
     }
   }
 
-  // Fallback con datos locales si Supabase no está configurado o no arroja resultados
-  const fallbackList: ResultadoBusqueda[] = [
-    { id: 1, nombre_paciente: 'Firulais', nombre_tutor: 'Juan Pérez', telefono: '300 123 4567', especie: 'Canino', servicio_interes: 'Medicina General', estado: 'Pendiente' },
-    { id: 2, nombre_paciente: 'Misi', nombre_tutor: 'Mariana Palacios', telefono: '312 984 2190', especie: 'Felino', servicio_interes: 'Medicina Interna', estado: 'En Gestión' },
-    { id: 3, nombre_paciente: 'Rocky', nombre_tutor: 'Carlos Méndez', telefono: '315 432 9876', especie: 'Canino', servicio_interes: 'Medicina General', estado: 'Cita Agendada' },
-    { id: 4, nombre_paciente: 'Luna', nombre_tutor: 'Camila Restrepo', telefono: '315 776 5432', especie: 'Felino', servicio_interes: 'Medicina Interna', estado: 'Pendiente' },
-    { id: 5, nombre_paciente: 'Thor', nombre_tutor: 'Roberto Luna', telefono: '311 654 9870', especie: 'Canino', servicio_interes: 'Medicina General', estado: 'Consulta Concretada' },
-    { id: 6, nombre_paciente: 'Simba', nombre_tutor: 'Sofía Echeverri', telefono: '320 876 1234', especie: 'Felino', servicio_interes: 'Medicina General', estado: 'Pendiente' },
-  ];
-
-  return fallbackList.filter(
-    (item) =>
-      item.nombre_paciente.toLowerCase().includes(cleanQuery) ||
-      item.nombre_tutor.toLowerCase().includes(cleanQuery) ||
-      item.telefono.includes(cleanQuery)
-  );
+  return [];
 }

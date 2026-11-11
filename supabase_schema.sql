@@ -98,29 +98,3 @@ SELECT
     COUNT(*) FILTER (WHERE estado = 'Consulta Concretada' AND servicio_interes = 'Medicina General') AS consultas_general,
     COUNT(*) FILTER (WHERE estado = 'Consulta Concretada' AND servicio_interes = 'Medicina Interna') AS consultas_interna
 FROM public.oportunidades;
-
--- 7. DATOS INICIALES DE PRUEBA (SEED DATA REALISTA)
-INSERT INTO public.pacientes (nombre_tutor, telefono, nombre_paciente, especie) VALUES
-('Juan Pérez', '3001234567', 'Firulais', 'Canino'),
-('Mariana Palacios', '3129842190', 'Misi', 'Felino'),
-('Carlos Méndez', '3154329876', 'Rocky', 'Canino'),
-('Camila Restrepo', '3157765432', 'Luna', 'Felino'),
-('Roberto Luna', '3116549870', 'Thor', 'Canino'),
-('Sofía Echeverri', '3208761234', 'Simba', 'Felino'),
-('Mateo Gómez', '3189901122', 'Max', 'Canino'),
-('Valentina Ruiz', '3142233445', 'Coco', 'Canino')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.oportunidades (
-    paciente_id, fecha_registro, servicio_interes, tipo_oportunidad, motivo, 
-    observaciones, fecha_propuesta_seguimiento, estado, resultado_gestion
-) VALUES
-(1, CURRENT_DATE, 'Medicina General', 'Cita no concretada', 'Costo de consulta', 'Interesado en paquete preventivo', CURRENT_DATE, 'Pendiente', NULL),
-(2, CURRENT_DATE - 3, 'Medicina Interna', 'Inasistencia', 'Falta de tiempo laboral', 'Presentó mejoría temporal, reprogramar', CURRENT_DATE, 'En Gestión', 'Se envió mensaje recordatorio por WhatsApp'),
-(3, CURRENT_DATE - 5, 'Medicina General', 'Cancelación', 'Incompatibilidad de horario matutino', 'Preferencia horario vespertino', CURRENT_DATE - 1, 'Cita Agendada', 'Llamada exitosa, agendado para jueves 16:00 hrs'),
-(4, CURRENT_DATE - 7, 'Medicina Interna', 'Sin nueva atención registrada', 'Sin seguimiento post-tratamiento', 'Control de gastroenterología pendiente', CURRENT_DATE - 2, 'Consulta Concretada', 'Paciente recuperado, asistió y canceló consulta'),
-(5, CURRENT_DATE - 10, 'Medicina General', 'Inasistencia', 'Lluvia y transporte', 'Llamada de rescate', CURRENT_DATE - 4, 'Consulta Concretada', 'Paciente recuperado asistió a medicina general'),
-(6, CURRENT_DATE - 4, 'Medicina General', 'Solicitud de información', 'Pregunta precio de vacunas', 'Tutor en recepción presencial', CURRENT_DATE, 'Pendiente', NULL),
-(7, CURRENT_DATE - 8, 'Medicina Interna', 'Cancelación', 'Prefirió otra clínica más cercana', 'Contacto telefónico', CURRENT_DATE - 3, 'Rechazado', 'Tutor indicó no requerir más el servicio'),
-(8, CURRENT_DATE - 6, 'Medicina Interna', 'Inasistencia', 'Olvido de cita', 'Reagendamiento necesario', CURRENT_DATE - 1, 'Consulta Concretada', 'Paciente recuperado en medicina interna')
-ON CONFLICT DO NOTHING;
