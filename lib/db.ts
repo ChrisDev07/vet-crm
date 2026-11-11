@@ -46,6 +46,9 @@ export interface MetricasDashboard {
   pacientes_recuperados: number;
   consultas_general: number;
   consultas_interna: number;
+  pendientes: number;
+  en_gestion: number;
+  rechazados: number;
 }
 
 /**
@@ -171,44 +174,62 @@ export async function actualizarEstadoOportunidad(
  * Obtiene las 7 métricas del plan de mejoramiento directamente desde PostgreSQL
  */
 export async function obtenerMetricasDashboard(): Promise<MetricasDashboard> {
+  const emptyMetrics: MetricasDashboard = {
+    total_identificadas: 0,
+    total_gestionadas: 0,
+    citas_generadas: 0,
+    consultas_concretadas: 0,
+    pacientes_recuperados: 0,
+    consultas_general: 0,
+    consultas_interna: 0,
+    pendientes: 0,
+    en_gestion: 0,
+    rechazados: 0,
+  };
+
   if (!isSupabaseConfigured() || !supabase) {
-    return {
-      total_identificadas: 0,
-      total_gestionadas: 0,
-      citas_generadas: 0,
-      consultas_concretadas: 0,
-      pacientes_recuperados: 0,
-      consultas_general: 0,
-      consultas_interna: 0,
-    };
+    return emptyMetrics;
   }
 
-  const { data, error } = await supabase
-    .from('vista_metricas_dashboard')
-    .select('*')
-    .single();
+  const { data: rows, error } = await supabase
+    .from('oportunidades')
+    .select('estado, servicio_interes, tipo_oportunidad');
 
-  if (error || !data) {
+  if (error || !rows) {
     console.error('Error al obtener métricas:', error);
-    return {
-      total_identificadas: 0,
-      total_gestionadas: 0,
-      citas_generadas: 0,
-      consultas_concretadas: 0,
-      pacientes_recuperados: 0,
-      consultas_general: 0,
-      consultas_interna: 0,
-    };
+    return emptyMetrics;
   }
+
+  const total_identificadas = rows.length;
+  const pendientes = rows.filter((r) => r.estado === 'Pendiente').length;
+  const en_gestion = rows.filter((r) => r.estado === 'En Gestión').length;
+  const citas_generadas = rows.filter((r) => r.estado === 'Cita Agendada').length;
+  const consultas_concretadas = rows.filter((r) => r.estado === 'Consulta Concretada').length;
+  const rechazados = rows.filter((r) => r.estado === 'Rechazado').length;
+  const total_gestionadas = rows.filter((r) => r.estado !== 'Pendiente').length;
+  const pacientes_recuperados = rows.filter(
+    (r) =>
+      r.estado === 'Consulta Concretada' &&
+      ['Inasistencia', 'Cancelación', 'Sin nueva atención registrada'].includes(r.tipo_oportunidad)
+  ).length;
+  const consultas_general = rows.filter(
+    (r) => r.estado === 'Consulta Concretada' && r.servicio_interes === 'Medicina General'
+  ).length;
+  const consultas_interna = rows.filter(
+    (r) => r.estado === 'Consulta Concretada' && r.servicio_interes === 'Medicina Interna'
+  ).length;
 
   return {
-    total_identificadas: Number(data.total_identificadas) || 0,
-    total_gestionadas: Number(data.total_gestionadas) || 0,
-    citas_generadas: Number(data.citas_generadas) || 0,
-    consultas_concretadas: Number(data.consultas_concretadas) || 0,
-    pacientes_recuperados: Number(data.pacientes_recuperados) || 0,
-    consultas_general: Number(data.consultas_general) || 0,
-    consultas_interna: Number(data.consultas_interna) || 0,
+    total_identificadas,
+    total_gestionadas,
+    citas_generadas,
+    consultas_concretadas,
+    pacientes_recuperados,
+    consultas_general,
+    consultas_interna,
+    pendientes,
+    en_gestion,
+    rechazados,
   };
 }
 

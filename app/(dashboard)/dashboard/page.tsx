@@ -21,16 +21,17 @@ export default function DashboardPage() {
     pacientes_recuperados: 18,
     consultas_general: 16,
     consultas_interna: 12,
+    pendientes: 35,
+    en_gestion: 0,
+    rechazados: 19,
   });
 
   const loadData = async () => {
     if (isSupabaseConfigured()) {
       try {
         const dbData = await obtenerMetricasDashboard();
-        if (dbData.total_identificadas > 0) {
-          setMetrics(dbData);
-          setIsLiveFromDb(true);
-        }
+        setMetrics(dbData);
+        setIsLiveFromDb(true);
       } catch (err) {
         console.error('Error al cargar métricas de Supabase:', err);
       }
@@ -86,6 +87,20 @@ export default function DashboardPage() {
     showToast('📥 Reporte de métricas exportado a Excel (CSV)');
   };
 
+  const totalConsultas = metrics.consultas_concretadas || 0;
+  const pctGeneral = totalConsultas > 0 ? (metrics.consultas_general / totalConsultas) * 100 : 0;
+  const pctInterna = totalConsultas > 0 ? (metrics.consultas_interna / totalConsultas) * 100 : 0;
+  const circumference = 389.56;
+  const dashGeneral = (pctGeneral / 100) * circumference;
+  const dashInterna = (pctInterna / 100) * circumference;
+
+  const totalBase = metrics.total_identificadas || 1;
+  const pctPendientes = ((metrics.pendientes / totalBase) * 100).toFixed(1);
+  const pctEnGestion = ((metrics.en_gestion / totalBase) * 100).toFixed(1);
+  const pctCitas = ((metrics.citas_generadas / totalBase) * 100).toFixed(1);
+  const pctConcretadas = ((metrics.consultas_concretadas / totalBase) * 100).toFixed(1);
+  const pctRechazados = ((metrics.rechazados / totalBase) * 100).toFixed(1);
+
   return (
     <main className="relative pt-20 bg-surface min-h-screen px-gutter py-space-md">
       <div className="flex flex-col w-full">
@@ -119,7 +134,7 @@ export default function DashboardPage() {
                   </h1>
                   <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-                    En Tiempo Real
+                    {isLiveFromDb ? 'Supabase en Tiempo Real' : 'Modo Demo Local'}
                   </span>
                 </div>
                 <p className="font-body-md text-body-md text-on-surface-variant">
@@ -361,11 +376,15 @@ export default function DashboardPage() {
                 <div className="relative flex items-center justify-center my-4">
                   <svg className="w-56 h-56 transform -rotate-90 drop-shadow-sm" viewBox="0 0 160 160">
                     <circle cx="80" cy="80" fill="none" r="62" stroke="#eff4ff" strokeWidth="18"></circle>
-                    <circle className="transition-all duration-1000 ease-out" cx="80" cy="80" fill="none" r="62" stroke="#00685f" strokeDasharray="222.4 389.5" strokeDashoffset="0" strokeLinecap="round" strokeWidth="18"></circle>
-                    <circle className="transition-all duration-1000 ease-out" cx="80" cy="80" fill="none" r="62" stroke="#00687a" strokeDasharray="163 389.5" strokeDashoffset="-226" strokeLinecap="round" strokeWidth="18"></circle>
+                    {dashGeneral > 0 && (
+                      <circle className="transition-all duration-1000 ease-out" cx="80" cy="80" fill="none" r="62" stroke="#00685f" strokeDasharray={`${dashGeneral.toFixed(1)} ${circumference.toFixed(1)}`} strokeDashoffset="0" strokeLinecap="round" strokeWidth="18"></circle>
+                    )}
+                    {dashInterna > 0 && (
+                      <circle className="transition-all duration-1000 ease-out" cx="80" cy="80" fill="none" r="62" stroke="#00687a" strokeDasharray={`${dashInterna.toFixed(1)} ${circumference.toFixed(1)}`} strokeDashoffset={`-${dashGeneral.toFixed(1)}`} strokeLinecap="round" strokeWidth="18"></circle>
+                    )}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="font-display-lg text-display-lg font-bold text-on-surface leading-none">28</span>
+                    <span className="font-display-lg text-display-lg font-bold text-on-surface leading-none">{metrics.consultas_concretadas}</span>
                     <span className="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold mt-1">Consultas</span>
                   </div>
                 </div>
@@ -382,8 +401,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-label-lg text-label-lg font-bold text-primary">16 citas</span>
-                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">57.1%</span>
+                    <span className="font-label-lg text-label-lg font-bold text-primary">{metrics.consultas_general} citas</span>
+                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">{pctGeneral.toFixed(1)}%</span>
                   </div>
                 </div>
 
@@ -396,8 +415,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-label-lg text-label-lg font-bold text-secondary">12 citas</span>
-                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">42.9%</span>
+                    <span className="font-label-lg text-label-lg font-bold text-secondary">{metrics.consultas_interna} citas</span>
+                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">{pctInterna.toFixed(1)}%</span>
                   </div>
                 </div>
 
@@ -428,7 +447,7 @@ export default function DashboardPage() {
                 </p>
 
                 {/* Pipeline Horizontal Bars */}
-                <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-4">
                   {/* 1. Pendientes */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between font-label-md text-label-md">
@@ -436,16 +455,36 @@ export default function DashboardPage() {
                         <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></span>
                         <span className="text-on-surface font-semibold">Pendientes de Contacto</span>
                         <span className="px-2 py-0.5 rounded-md bg-[#fef3c7] text-[#b45309] font-label-sm text-label-sm font-bold">
-                          35 casos
+                          {metrics.pendientes} casos
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-on-surface-variant font-body-sm text-body-sm">Tiempo prom: 4.2h</span>
-                        <span className="font-bold text-on-surface">28.2%</span>
+                        <span className="text-on-surface-variant font-body-sm text-body-sm">Por gestionar</span>
+                        <span className="font-bold text-on-surface">{pctPendientes}%</span>
                       </div>
                     </div>
                     <div className="w-full bg-surface-container-low rounded-full h-3.5 p-0.5 overflow-hidden">
-                      <div className="bg-[#f59e0b] h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: '28.2%' }}></div>
+                      <div className="bg-[#f59e0b] h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `${pctPendientes}%` }}></div>
+                    </div>
+                  </div>
+
+                  {/* 1.5 En Gestión */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between font-label-md text-label-md">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                        <span className="text-on-surface font-semibold">En Gestión / Seguimiento</span>
+                        <span className="px-2 py-0.5 rounded-md bg-secondary-fixed/50 text-secondary font-label-sm text-label-sm font-bold">
+                          {metrics.en_gestion} casos
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-on-surface-variant font-body-sm text-body-sm">Contacto activo</span>
+                        <span className="font-bold text-on-surface">{pctEnGestion}%</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-surface-container-low rounded-full h-3.5 p-0.5 overflow-hidden">
+                      <div className="bg-secondary h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `${pctEnGestion}%` }}></div>
                     </div>
                   </div>
 
@@ -456,16 +495,16 @@ export default function DashboardPage() {
                         <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]"></span>
                         <span className="text-on-surface font-semibold">Citas Agendadas</span>
                         <span className="px-2 py-0.5 rounded-md bg-[#dbeafe] text-[#1d4ed8] font-label-sm text-label-sm font-bold">
-                          42 casos
+                          {metrics.citas_generadas} casos
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-on-surface-variant font-body-sm text-body-sm">Confirmación: 92%</span>
-                        <span className="font-bold text-on-surface">33.8%</span>
+                        <span className="text-on-surface-variant font-body-sm text-body-sm">En agenda clínica</span>
+                        <span className="font-bold text-on-surface">{pctCitas}%</span>
                       </div>
                     </div>
                     <div className="w-full bg-surface-container-low rounded-full h-3.5 p-0.5 overflow-hidden">
-                      <div className="bg-[#3b82f6] h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: '33.8%' }}></div>
+                      <div className="bg-[#3b82f6] h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `${pctCitas}%` }}></div>
                     </div>
                   </div>
 
@@ -476,16 +515,16 @@ export default function DashboardPage() {
                         <span className="w-2.5 h-2.5 rounded-full bg-primary"></span>
                         <span className="text-on-surface font-semibold">Consultas Concretadas (Efectivas)</span>
                         <span className="px-2 py-0.5 rounded-md bg-primary-fixed/50 text-on-primary-fixed-variant font-label-sm text-label-sm font-bold">
-                          28 casos
+                          {metrics.consultas_concretadas} casos
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-tertiary font-body-sm text-body-sm font-semibold">+$3.850.000 COP</span>
-                        <span className="font-bold text-primary">22.6%</span>
+                        <span className="text-tertiary font-body-sm text-body-sm font-semibold">+${(metrics.consultas_concretadas * 145000).toLocaleString('es-CO')} COP</span>
+                        <span className="font-bold text-primary">{pctConcretadas}%</span>
                       </div>
                     </div>
                     <div className="w-full bg-surface-container-low rounded-full h-3.5 p-0.5 overflow-hidden">
-                      <div className="bg-primary h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: '22.6%' }}></div>
+                      <div className="bg-primary h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `${pctConcretadas}%` }}></div>
                     </div>
                   </div>
 
@@ -496,16 +535,16 @@ export default function DashboardPage() {
                         <span className="w-2.5 h-2.5 rounded-full bg-error"></span>
                         <span className="text-on-surface font-semibold">Rechazados / No Concretados</span>
                         <span className="px-2 py-0.5 rounded-md bg-error-container text-on-error-container font-label-sm text-label-sm font-bold">
-                          19 casos
+                          {metrics.rechazados} casos
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-on-surface-variant font-body-sm text-body-sm">Sin disponibilidad / Precio</span>
-                        <span className="font-bold text-on-surface">15.4%</span>
+                        <span className="font-bold text-on-surface">{pctRechazados}%</span>
                       </div>
                     </div>
                     <div className="w-full bg-surface-container-low rounded-full h-3.5 p-0.5 overflow-hidden">
-                      <div className="bg-error/80 h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: '15.4%' }}></div>
+                      <div className="bg-error/80 h-full rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `${pctRechazados}%` }}></div>
                     </div>
                   </div>
 
