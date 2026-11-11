@@ -2,16 +2,23 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Phone, Dog, Calendar, Stethoscope, ClipboardList, Info, MessageSquare, CheckCircle2, ChevronDown } from 'lucide-react';
+import { User, Phone, Dog, Calendar, Stethoscope, ClipboardList, Info, MessageSquare, CheckCircle2, ChevronDown, Database, AlertCircle } from 'lucide-react';
+import { crearOportunidad, NuevoRegistroPayload } from '@/lib/db';
+import { isSupabaseConfigured } from '@/lib/supabaseClient';
 
 export default function RegistroForm() {
   const [formData, setFormData] = useState({
     nombre_tutor: '',
     nombre_paciente: '',
-    especie: 'Canino',
+    especie: 'Canino' as 'Canino' | 'Felino' | 'Otro',
     telefono: '',
-    servicio_interes: 'Medicina General',
-    tipo_oportunidad: 'Solicitud de información',
+    servicio_interes: 'Medicina General' as 'Medicina General' | 'Medicina Interna',
+    tipo_oportunidad: 'Solicitud de información' as
+      | 'Solicitud de información'
+      | 'Cita no concretada'
+      | 'Cancelación'
+      | 'Inasistencia'
+      | 'Sin nueva atención registrada',
     motivo: '',
     observaciones: '',
     fecha_propuesta_seguimiento: '',
@@ -19,12 +26,21 @@ export default function RegistroForm() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    setTimeout(() => {
+    setErrorMessage('');
+
+    try {
+      if (isSupabaseConfigured()) {
+        await crearOportunidad(formData as NuevoRegistroPayload);
+      } else {
+        // Demostración local si aún no se han configurado las claves de Supabase
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+
       setIsSubmitting(false);
       setSuccess(true);
       setTimeout(() => {
@@ -36,9 +52,14 @@ export default function RegistroForm() {
           telefono: '',
           motivo: '',
           observaciones: '',
+          fecha_propuesta_seguimiento: '',
         });
       }, 3500);
-    }, 1500);
+    } catch (err: unknown) {
+      setIsSubmitting(false);
+      const msg = err instanceof Error ? err.message : 'Error al guardar en la base de datos';
+      setErrorMessage(msg);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -103,6 +124,13 @@ export default function RegistroForm() {
               exit={{ opacity: 0 }}
               className="space-y-10"
             >
+              {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                  <p className="text-sm font-medium">{errorMessage}</p>
+                </div>
+              )}
+
               {/* Bloque 1: Tutor y Paciente */}
               <div className="bg-slate-50/80 p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
                 <div className="flex items-center gap-4 border-b border-slate-200 pb-4">

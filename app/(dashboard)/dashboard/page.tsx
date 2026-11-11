@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { obtenerMetricasDashboard, MetricasDashboard } from '@/lib/db';
+import { isSupabaseConfigured } from '@/lib/supabaseClient';
 
 export default function DashboardPage() {
   const [syncTime, setSyncTime] = useState('Hoy a las 11:45 AM');
@@ -9,10 +11,36 @@ export default function DashboardPage() {
   const [periodFilter, setPeriodFilter] = useState('este_mes');
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [isLiveFromDb, setIsLiveFromDb] = useState(false);
+
+  const [metrics, setMetrics] = useState<MetricasDashboard>({
+    total_identificadas: 124,
+    total_gestionadas: 89,
+    citas_generadas: 42,
+    consultas_concretadas: 28,
+    pacientes_recuperados: 18,
+    consultas_general: 16,
+    consultas_interna: 12,
+  });
+
+  const loadData = async () => {
+    if (isSupabaseConfigured()) {
+      try {
+        const dbData = await obtenerMetricasDashboard();
+        if (dbData.total_identificadas > 0) {
+          setMetrics(dbData);
+          setIsLiveFromDb(true);
+        }
+      } catch (err) {
+        console.error('Error al cargar métricas de Supabase:', err);
+      }
+    }
+  };
 
   useEffect(() => {
     const now = new Date();
     setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    loadData();
   }, []);
 
   const showToast = (msg: string) => {
@@ -21,14 +49,13 @@ export default function DashboardPage() {
     setTimeout(() => setToastVisible(false), 3500);
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      const now = new Date();
-      setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-      showToast('🔄 Métricas sincronizadas en tiempo real');
-    }, 600);
+    await loadData();
+    setIsRefreshing(false);
+    const now = new Date();
+    setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    showToast(isSupabaseConfigured() ? '🔄 Métricas sincronizadas con Supabase (PostgreSQL)' : '🔄 Métricas actualizadas (Modo Demo)');
   };
 
   const handlePrint = () => {
@@ -38,15 +65,13 @@ export default function DashboardPage() {
   const handleExportExcel = () => {
     const headers = ['Indicador_Clave', 'Valor', 'Detalle_Clinico', 'Meta'];
     const rows = [
-      ['1. Oportunidades Identificadas', '124', 'Total de casos capturados en recepción', 'N/A'],
-      ['2. Oportunidades Gestionadas', '89', '71.7% de tasa de contacto activo', '70%'],
-      ['3. Citas Generadas', '42', '33.8% de conversión a agenda', '30%'],
-      ['4. Consultas Concretadas', '28', 'Pacientes que asistieron a consulta médica', '25%'],
-      ['5. Pacientes Recuperados', '18', 'Recuperados tras inasistencia o cancelación', '15'],
-      ['6. Consultas Medicina General', '16', '57.1% del total de consultas cerradas', 'N/A'],
-      ['7. Consultas Medicina Interna', '12', '42.9% de alta complejidad / derivaciones', 'N/A'],
-      ['Eficiencia Global de Recuperacion', '64.2%', 'Impacto en retención clínica', '60%'],
-      ['Impacto Economico Estimado', '$2.450.000 COP', 'Ingresos recuperados para la clínica', 'N/A']
+      ['1. Oportunidades Identificadas', metrics.total_identificadas.toString(), 'Total de casos capturados en recepción', 'N/A'],
+      ['2. Oportunidades Gestionadas', metrics.total_gestionadas.toString(), `${((metrics.total_gestionadas / (metrics.total_identificadas || 1)) * 100).toFixed(1)}% de tasa de contacto activo`, '70%'],
+      ['3. Citas Generadas', metrics.citas_generadas.toString(), `${((metrics.citas_generadas / (metrics.total_identificadas || 1)) * 100).toFixed(1)}% de conversión a agenda`, '30%'],
+      ['4. Consultas Concretadas', metrics.consultas_concretadas.toString(), 'Pacientes que asistieron a consulta médica', '25%'],
+      ['5. Pacientes Recuperados', metrics.pacientes_recuperados.toString(), 'Recuperados tras inasistencia o cancelación', '15'],
+      ['6. Consultas Medicina General', metrics.consultas_general.toString(), 'Consultas de medicina general cerradas', 'N/A'],
+      ['7. Consultas Medicina Interna', metrics.consultas_interna.toString(), 'Consultas de medicina interna / derivaciones', 'N/A'],
     ];
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
@@ -200,7 +225,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="mt-4 flex items-baseline justify-between">
-                  <span className="font-display-lg text-display-lg font-bold text-on-surface">124</span>
+                  <span className="font-display-lg text-display-lg font-bold text-on-surface">{metrics.total_identificadas}</span>
                   <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-tertiary-fixed/30 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">
                     <span className="material-symbols-outlined text-[14px]">arrow_upward</span>+14%
                   </span>
@@ -219,13 +244,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="mt-4 flex items-baseline justify-between">
-                  <span className="font-display-lg text-display-lg font-bold text-on-surface">89</span>
+                  <span className="font-display-lg text-display-lg font-bold text-on-surface">{metrics.total_gestionadas}</span>
                   <span className="px-2 py-0.5 rounded-full bg-secondary-fixed/40 text-on-secondary-fixed-variant font-label-sm text-label-sm font-semibold">
-                    71.7% tasa
+                    {((metrics.total_gestionadas / (metrics.total_identificadas || 1)) * 100).toFixed(1)}% tasa
                   </span>
                 </div>
                 <div className="mt-2 w-full bg-surface-container-low rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-secondary h-full rounded-full transition-all duration-1000" style={{ width: '71.7%' }}></div>
+                  <div className="bg-secondary h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (metrics.total_gestionadas / (metrics.total_identificadas || 1)) * 100)}%` }}></div>
                 </div>
               </div>
 
@@ -238,9 +263,9 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="mt-4 flex items-baseline justify-between">
-                  <span className="font-display-lg text-display-lg font-bold text-on-surface">42</span>
+                  <span className="font-display-lg text-display-lg font-bold text-on-surface">{metrics.citas_generadas}</span>
                   <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold">
-                    33.8% conv.
+                    {((metrics.citas_generadas / (metrics.total_identificadas || 1)) * 100).toFixed(1)}% conv.
                   </span>
                 </div>
                 <div className="mt-2 text-on-surface-variant font-body-sm text-body-sm flex items-center gap-1">
@@ -258,10 +283,10 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="mt-4 flex items-baseline justify-between">
-                  <span className="font-display-lg text-display-lg font-bold text-on-surface">28</span>
+                  <span className="font-display-lg text-display-lg font-bold text-on-surface">{metrics.consultas_concretadas}</span>
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-tertiary text-on-tertiary font-label-sm text-label-sm font-semibold shadow-sm">
                     <span className="material-symbols-outlined text-[12px]">medical_services</span>
-                    18 Recuperados
+                    {metrics.pacientes_recuperados} Recuperados
                   </span>
                 </div>
                 <div className="mt-2 text-tertiary font-label-sm text-label-sm font-semibold">
@@ -283,11 +308,11 @@ export default function DashboardPage() {
                   <div className="flex flex-col">
                     <span className="font-label-md text-label-md text-on-surface-variant">6. Especialidad Clínica</span>
                     <span className="font-headline-md text-headline-md font-bold text-on-surface">Medicina General</span>
-                    <span className="font-body-sm text-body-sm text-primary font-medium">57.1% del total de consultas cerradas</span>
+                    <span className="font-body-sm text-body-sm text-primary font-medium">{((metrics.consultas_general / (metrics.consultas_concretadas || 1)) * 100).toFixed(1)}% del total de consultas cerradas</span>
                   </div>
                 </div>
                 <div className="text-right flex flex-col items-end">
-                  <span className="font-display-lg text-display-lg font-bold text-primary">16</span>
+                  <span className="font-display-lg text-display-lg font-bold text-primary">{metrics.consultas_general}</span>
                   <span className="font-label-sm text-label-sm text-on-surface-variant">Citas efectivas</span>
                 </div>
               </div>
@@ -301,11 +326,11 @@ export default function DashboardPage() {
                   <div className="flex flex-col">
                     <span className="font-label-md text-label-md text-on-surface-variant">7. Alta Complejidad</span>
                     <span className="font-headline-md text-headline-md font-bold text-on-surface">Medicina Interna</span>
-                    <span className="font-body-sm text-body-sm text-secondary font-medium">42.9% de derivaciones especializadas</span>
+                    <span className="font-body-sm text-body-sm text-secondary font-medium">{((metrics.consultas_interna / (metrics.consultas_concretadas || 1)) * 100).toFixed(1)}% de derivaciones especializadas</span>
                   </div>
                 </div>
                 <div className="text-right flex flex-col items-end">
-                  <span className="font-display-lg text-display-lg font-bold text-secondary">12</span>
+                  <span className="font-display-lg text-display-lg font-bold text-secondary">{metrics.consultas_interna}</span>
                   <span className="font-label-sm text-label-sm text-on-surface-variant">Citas efectivas</span>
                 </div>
               </div>

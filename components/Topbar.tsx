@@ -2,26 +2,24 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { buscarPacientesYOportunidades, ResultadoBusqueda } from '@/lib/db';
 
 export default function Topbar() {
+  const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Recordatorio', message: 'Llamar a tutor de Thor a las 16:30', time: 'Hace 5 min', unread: true },
-    { id: 2, title: 'Resultados listos', message: 'Los labs de Luna ya están disponibles', time: 'Hace 1 hora', unread: true },
-    { id: 3, title: 'Sistema', message: 'Se ha actualizado la base de datos de vacunas', time: 'Ayer', unread: false }
+    { id: 1, title: 'Recordatorio', message: 'Llamar a tutor de Firulais a las 16:00', time: 'Hace 5 min', unread: true },
+    { id: 2, title: 'Seguimiento pendiente', message: 'Revisar bandeja de Llamadas de Hoy', time: 'Hace 1 hora', unread: true },
+    { id: 3, title: 'Sistema', message: 'Integración con Supabase lista para usar', time: 'Hoy', unread: false }
   ]);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ResultadoBusqueda[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-
-  // Fake DB for search
-  const fakeDb = [
-    { id: 1, pet: 'Thor', tutor: 'Mateo Rivas', phone: '+57 300 123 4567', type: 'Canino', lastVisit: '10 Oct 2026' },
-    { id: 2, pet: 'Luna', tutor: 'Sofía Castro', phone: '+57 311 987 6543', type: 'Felino', lastVisit: '05 Oct 2026' },
-    { id: 3, pet: 'Simba', tutor: 'Lucía Fernández', phone: '+57 322 456 7890', type: 'Felino', lastVisit: 'Hoy' },
-    { id: 4, pet: 'Milo', tutor: 'Carlos Méndez', phone: '+57 315 789 1234', type: 'Canino', lastVisit: 'Nuevo' },
-  ];
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -29,17 +27,42 @@ export default function Topbar() {
         setIsSearchFocused(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        inputRef.current?.focus();
+        setIsSearchFocused(true);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
-  const searchResults = searchQuery.trim() === '' 
-    ? [] 
-    : fakeDb.filter(item => 
-        item.pet.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        item.tutor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.phone.includes(searchQuery)
-      );
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      const results = await buscarPacientesYOportunidades(searchQuery);
+      setSearchResults(results);
+      setIsSearching(false);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSelectResult = (result: ResultadoBusqueda) => {
+    setIsSearchFocused(false);
+    setSearchQuery('');
+    router.push(`/gestion?q=${encodeURIComponent(result.nombre_paciente)}`);
+  };
 
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, unread: false })));
@@ -55,6 +78,7 @@ export default function Topbar() {
         <div ref={searchRef} className="relative w-full max-w-md z-50">
           <span className="material-symbols-outlined absolute left-3 top-1/2 pointer-events-none -translate-y-1/2 text-outline text-[18px]">search</span>
           <input 
+            ref={inputRef}
             className="w-full pl-9 pr-4 py-2 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all shadow-inner" 
             placeholder="Buscar tutor o paciente... (Ctrl+K)" 
             type="text"
@@ -68,37 +92,47 @@ export default function Topbar() {
             <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container-low overflow-hidden animate-in fade-in slide-in-from-top-2">
               <div className="p-2 border-b border-surface-container-low/50 bg-surface-container-low/30 flex items-center justify-between">
                 <span className="font-label-sm text-label-sm text-outline px-2">Resultados rápidos</span>
-                <span className="font-label-sm text-label-sm text-primary px-2">{searchResults.length} encontrados</span>
+                <span className="font-label-sm text-label-sm text-primary px-2">
+                  {isSearching ? 'Buscando...' : `${searchResults.length} encontrados`}
+                </span>
               </div>
               <div className="flex flex-col max-h-96 overflow-y-auto">
                 {searchResults.length > 0 ? (
                   searchResults.map(result => (
-                    <button key={result.id} type="button" className="flex items-center gap-3 p-3 hover:bg-surface-container-low/50 transition-colors text-left border-b border-surface-container-low/30 last:border-0 group">
+                    <button
+                      key={result.id}
+                      type="button"
+                      onClick={() => handleSelectResult(result)}
+                      className="flex items-center gap-3 p-3 hover:bg-surface-container-low/50 transition-colors text-left border-b border-surface-container-low/30 last:border-0 group"
+                    >
                       <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-[20px]">{result.type === 'Canino' ? 'pets' : 'cruelty_free'}</span>
+                        <span className="material-symbols-outlined text-[20px]">{result.especie === 'Canino' ? 'pets' : 'cruelty_free'}</span>
                       </div>
                       <div className="flex flex-col min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-label-md text-label-md text-on-surface font-bold truncate">{result.pet}</span>
-                          <span className="px-1.5 py-0.5 rounded-md bg-surface-container text-on-surface-variant font-label-sm text-[10px] uppercase tracking-wider">{result.type}</span>
+                          <span className="font-label-md text-label-md text-on-surface font-bold truncate">{result.nombre_paciente}</span>
+                          <span className="px-1.5 py-0.5 rounded-md bg-surface-container text-on-surface-variant font-label-sm text-[10px] uppercase tracking-wider">{result.especie}</span>
+                          {result.estado && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-label-sm text-[10px] font-semibold">{result.estado}</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="font-body-sm text-body-sm text-on-surface-variant truncate"><span className="material-symbols-outlined text-[13px] align-text-bottom mr-0.5">person</span>{result.tutor}</span>
-                          <span className="font-body-sm text-[11px] text-outline truncate">• {result.phone}</span>
+                          <span className="font-body-sm text-body-sm text-on-surface-variant truncate"><span className="material-symbols-outlined text-[13px] align-text-bottom mr-0.5">person</span>{result.nombre_tutor}</span>
+                          <span className="font-body-sm text-[11px] text-outline truncate">• {result.telefono}</span>
                         </div>
                       </div>
                       <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-[20px]">chevron_right</span>
                     </button>
                   ))
-                ) : (
+                ) : !isSearching ? (
                   <div className="p-8 text-center flex flex-col items-center gap-2">
                     <span className="material-symbols-outlined text-4xl text-outline/50">search_off</span>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant">No se encontraron pacientes para "{searchQuery}"</p>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">No se encontraron pacientes para &ldquo;{searchQuery}&rdquo;</p>
                     <Link href="/registro" onClick={() => setIsSearchFocused(false)} className="mt-2 px-4 py-1.5 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm hover:bg-primary/20 transition-colors">
                       + Registrar nuevo prospecto
                     </Link>
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           )}

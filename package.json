@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
     "cheerio": "^1.2.0",
     "framer-motion": "^14.1.0",
     "lucide-react": "^1.55.0",

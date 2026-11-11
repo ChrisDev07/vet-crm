@@ -15,23 +15,34 @@ export default function Home() {
           Bienvenida al nuevo CRM Clínico de MEDIVET. Utiliza el menú lateral para navegar entre las diferentes herramientas.
         </p>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link href="/registro" className="group p-4 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md hover:bg-surface-container-low hover:-translate-y-1 transition-all flex items-start gap-3 text-left border border-transparent hover:border-tertiary/20">
             <div className="w-10 h-10 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <span className="material-symbols-outlined text-[20px]">assignment_add</span>
             </div>
             <div>
               <h3 className="font-label-md text-label-md text-on-surface group-hover:text-tertiary transition-colors">Atención Rápida</h3>
-              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Registra nuevos prospectos en segundos.</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Registra nuevos prospectos en menos de 1 minuto.</p>
             </div>
           </Link>
-          <div className="p-4 rounded-xl bg-surface-container-lowest shadow-sm flex items-start gap-3 text-left opacity-70">
-            <span className="material-symbols-outlined text-secondary">monitoring</span>
-            <div>
-              <h3 className="font-label-md text-label-md text-on-surface">Métricas de hoy</h3>
-              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Sección en construcción.</p>
+          <Link href="/gestion" className="group p-4 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md hover:bg-surface-container-low hover:-translate-y-1 transition-all flex items-start gap-3 text-left border border-transparent hover:border-primary/20">
+            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-[20px]">group</span>
             </div>
-          </div>
+            <div>
+              <h3 className="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">Gestión y Casos</h3>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Llamadas de hoy, seguimiento y cambios de estado.</p>
+            </div>
+          </Link>
+          <Link href="/dashboard" className="group p-4 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md hover:bg-surface-container-low hover:-translate-y-1 transition-all flex items-start gap-3 text-left border border-transparent hover:border-secondary/20">
+            <div className="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-[20px]">monitoring</span>
+            </div>
+            <div>
+              <h3 className="font-label-md text-label-md text-on-surface group-hover:text-secondary transition-colors">Tablero de Métricas</h3>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">7 KPIs automáticos para el informe de grado.</p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

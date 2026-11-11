@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { obtenerOportunidades, actualizarEstadoOportunidad } from '@/lib/db';
+import { isSupabaseConfigured } from '@/lib/supabaseClient';
 
 interface Opportunity {
   id: number;
@@ -116,6 +118,47 @@ export default function GestionPage() {
   const [toastMsg, setToastMsg] = useState<string>('');
   const [toastVisible, setToastVisible] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q');
+      if (q) {
+        setSearchQuery(q);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    async function loadData() {
+      if (isSupabaseConfigured()) {
+        try {
+          const dbData = await obtenerOportunidades();
+          if (dbData && dbData.length > 0) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const mapped: Opportunity[] = dbData.map((d) => ({
+              id: d.id,
+              tutor: d.pacientes?.nombre_tutor || 'Tutor',
+              pet: d.pacientes?.nombre_paciente || 'Mascota',
+              species: (d.pacientes?.especie as 'Canino' | 'Felino' | 'Exótico') || 'Canino',
+              age: 'Adulto',
+              phone: d.pacientes?.telefono || '',
+              service: d.servicio_interes,
+              opportunityType: d.tipo_oportunidad,
+              notes: d.resultado_gestion || d.motivo || d.observaciones || 'Sin notas registradas',
+              proposedDate: d.fecha_propuesta_seguimiento || 'Sin fecha',
+              isToday: d.fecha_propuesta_seguimiento === todayStr,
+              status: d.estado === 'En Gestión' ? 'En Proceso' : (d.estado as Opportunity['status']),
+            }));
+            setOpportunities(mapped);
+          }
+        } catch (e) {
+          console.error('Error cargando de Supabase:', e);
+        }
+      }
+    }
+    loadData();
+  }, []);
+
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setToastVisible(true);
@@ -162,9 +205,17 @@ export default function GestionPage() {
   }, [opportunities, activeStatusTab, dateFilter, searchQuery]);
 
   // Handle Quick Status Change
-  const handleQuickStatusChange = (id: number, newStatus: Opportunity['status']) => {
+  const handleQuickStatusChange = async (id: number, newStatus: Opportunity['status']) => {
     setOpportunities(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
     showToast(`✅ Caso actualizado a "${newStatus}"`);
+    if (isSupabaseConfigured()) {
+      try {
+        const dbStatus = newStatus === 'En Proceso' ? 'En Gestión' : newStatus;
+        await actualizarEstadoOportunidad(id, dbStatus as 'Pendiente' | 'En Gestión' | 'Cita Agendada' | 'Consulta Concretada' | 'Rechazado');
+      } catch (err) {
+        console.error('Error actualizando en Supabase:', err);
+      }
+    }
   };
 
   // Open Modal for Detailed Management
@@ -174,20 +225,35 @@ export default function GestionPage() {
     setModalNote('');
   };
 
-  const handleSaveModal = (e: React.FormEvent) => {
+  const handleSaveModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCaseForModal) return;
+
+    const noteToSave = modalNote.trim() !== '' ? `${modalNote} (${selectedCaseForModal.notes})` : selectedCaseForModal.notes;
 
     setOpportunities(prev => prev.map(o => {
       if (o.id === selectedCaseForModal.id) {
         return {
           ...o,
           status: modalNewStatus,
-          notes: modalNote.trim() !== '' ? `${modalNote} (${o.notes})` : o.notes
+          notes: noteToSave
         };
       }
       return o;
     }));
+
+    if (isSupabaseConfigured()) {
+      try {
+        const dbStatus = modalNewStatus === 'En Proceso' ? 'En Gestión' : modalNewStatus;
+        await actualizarEstadoOportunidad(
+          selectedCaseForModal.id,
+          dbStatus as 'Pendiente' | 'En Gestión' | 'Cita Agendada' | 'Consulta Concretada' | 'Rechazado',
+          noteToSave
+        );
+      } catch (err) {
+        console.error('Error actualizando en Supabase:', err);
+      }
+    }
 
     showToast(`✅ Gestión guardada para ${selectedCaseForModal.pet} (${modalNewStatus})`);
     setSelectedCaseForModal(null);
