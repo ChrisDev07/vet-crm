@@ -1,17 +1,28 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
+export type Especie = 'Canino' | 'Felino';
+
+export type ServicioInteres =
+  | 'Medicina General'
+  | 'Medicina Interna'
+  | 'Vacunación & Desparasitación'
+  | 'Cirugía/Quirófano';
+
+export type TipoOportunidad =
+  | 'Solicitud de información'
+  | 'Cita no concretada'
+  | 'Cancelación'
+  | 'Inasistencia'
+  | 'Sin nueva atención registrada'
+  | 'Otros';
+
 export interface NuevoRegistroPayload {
   nombre_tutor: string;
   nombre_paciente: string;
-  especie: 'Canino' | 'Felino' | 'Otro';
+  especie: Especie;
   telefono: string;
-  servicio_interes: 'Medicina General' | 'Medicina Interna';
-  tipo_oportunidad:
-    | 'Solicitud de información'
-    | 'Cita no concretada'
-    | 'Cancelación'
-    | 'Inasistencia'
-    | 'Sin nueva atención registrada';
+  servicio_interes: ServicioInteres;
+  tipo_oportunidad: TipoOportunidad;
   motivo?: string;
   observaciones?: string;
   fecha_propuesta_seguimiento?: string;
@@ -46,6 +57,8 @@ export interface MetricasDashboard {
   pacientes_recuperados: number;
   consultas_general: number;
   consultas_interna: number;
+  consultas_vacunacion: number;
+  consultas_cirugia: number;
   pendientes: number;
   en_gestion: number;
   rechazados: number;
@@ -190,6 +203,8 @@ export async function obtenerMetricasDashboard(dias?: number): Promise<MetricasD
     pacientes_recuperados: 0,
     consultas_general: 0,
     consultas_interna: 0,
+    consultas_vacunacion: 0,
+    consultas_cirugia: 0,
     pendientes: 0,
     en_gestion: 0,
     rechazados: 0,
@@ -235,6 +250,20 @@ export async function obtenerMetricasDashboard(dias?: number): Promise<MetricasD
   const consultas_interna = rows.filter(
     (r) => r.estado === 'Consulta Concretada' && r.servicio_interes === 'Medicina Interna'
   ).length;
+  const consultas_vacunacion = rows.filter(
+    (r) =>
+      r.estado === 'Consulta Concretada' &&
+      (r.servicio_interes === 'Vacunación & Desparasitación' ||
+        r.servicio_interes.includes('Vacunaci') ||
+        r.servicio_interes.includes('Desparasi'))
+  ).length;
+  const consultas_cirugia = rows.filter(
+    (r) =>
+      r.estado === 'Consulta Concretada' &&
+      (r.servicio_interes === 'Cirugía/Quirófano' ||
+        r.servicio_interes.includes('Cirug') ||
+        r.servicio_interes.includes('Quir'))
+  ).length;
 
   return {
     total_identificadas,
@@ -244,6 +273,8 @@ export async function obtenerMetricasDashboard(dias?: number): Promise<MetricasD
     pacientes_recuperados,
     consultas_general,
     consultas_interna,
+    consultas_vacunacion,
+    consultas_cirugia,
     pendientes,
     en_gestion,
     rechazados,

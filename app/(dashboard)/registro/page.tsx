@@ -6,7 +6,9 @@ import {
   crearOportunidad,
   obtenerOportunidades,
   OportunidadConPaciente,
-  NuevoRegistroPayload,
+  Especie,
+  ServicioInteres,
+  TipoOportunidad,
 } from '@/lib/db';
 
 const TIME_SLOTS = [
@@ -60,10 +62,9 @@ export default function RegistroPage() {
   const [nombrePaciente, setNombrePaciente] = useState('');
   const [raza, setRaza] = useState('');
   const [edad, setEdad] = useState('');
-  const [species, setSpecies] = useState<'Canino' | 'Felino' | 'Otro'>('Canino');
-  const [exoticDetail, setExoticDetail] = useState('');
-  const [servicioInteres, setServicioInteres] = useState<'Medicina General' | 'Medicina Interna'>('Medicina General');
-  const [tipoOportunidad, setTipoOportunidad] = useState<NuevoRegistroPayload['tipo_oportunidad']>('Solicitud de información');
+  const [species, setSpecies] = useState<Especie>('Canino');
+  const [servicioInteres, setServicioInteres] = useState<ServicioInteres>('Medicina General');
+  const [tipoOportunidad, setTipoOportunidad] = useState<TipoOportunidad>('Solicitud de información');
   const [motivo, setMotivo] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState('');
@@ -168,7 +169,6 @@ export default function RegistroPage() {
     setRaza('');
     setEdad('');
     setSpecies('Canino');
-    setExoticDetail('');
     setServicioInteres('Medicina General');
     setTipoOportunidad('Solicitud de información');
     setMotivo('');
@@ -189,11 +189,10 @@ export default function RegistroPage() {
 
     setIsSubmitting(true);
 
-    // Armar observaciones complementarias si se ingresó raza, edad, especie exótica o bloque horario
+    // Armar observaciones complementarias si se ingresó raza, edad o bloque horario
     const extras: string[] = [];
     if (raza.trim()) extras.push(`Raza: ${raza.trim()}`);
     if (edad.trim()) extras.push(`Edad: ${edad.trim()}`);
-    if (species === 'Otro' && exoticDetail.trim()) extras.push(`Detalle especie: ${exoticDetail.trim()}`);
     if (selectedSlotObj) extras.push(`Franja sugerida de llamada: ${selectedSlotObj.time}`);
 
     const fullObservations = [extras.length > 0 ? `[${extras.join(' | ')}]` : '', notes.trim()]
@@ -407,71 +406,38 @@ export default function RegistroPage() {
                       </div>
                     </div>
 
-                    {/* Selector Interactivo de Especie */}
-                    <div className="flex flex-col gap-1.5">
+                    {/* Selector Interactivo de Especie (Canino y Felino) */}
+                    <div className="flex flex-col gap-1.5 md:col-span-2">
                       <label className="font-label-sm text-label-sm text-on-surface flex items-center justify-between">
                         <span>Especie del Paciente <span className="text-error">*</span></span>
-                        <span className="text-outline text-body-sm text-[11px]">Selección rápida</span>
+                        <span className="text-outline text-body-sm text-[11px]">Canino o Felino</span>
                       </label>
-                      <div className="grid grid-cols-2 gap-2" id="species-toggle-group">
+                      <div className="grid grid-cols-2 gap-3" id="species-toggle-group">
                         <button
-                          className={`species-btn flex items-center justify-between px-3.5 py-2 rounded-xl transition-all text-left ${species === 'Canino' ? 'text-primary bg-primary-fixed/30 shadow-sm font-bold' : 'text-on-surface bg-surface-container-low/70 hover:bg-surface-container font-semibold'}`}
+                          className={`species-btn flex items-center justify-between px-4 py-2.5 rounded-xl transition-all text-left ${species === 'Canino' ? 'text-primary bg-primary-fixed/30 shadow-sm font-bold ring-1 ring-primary/30' : 'text-on-surface bg-surface-container-low/70 hover:bg-surface-container font-semibold'}`}
                           id="species-canino"
                           type="button"
-                          onClick={() => {
-                            setSpecies('Canino');
-                            setExoticDetail('');
-                          }}
+                          onClick={() => setSpecies('Canino')}
                         >
                           <span className="flex items-center gap-2 font-label-md text-label-md">
-                            <span className="text-base">🐶</span>
+                            <span className="text-lg">🐶</span>
                             <span>Canino</span>
                           </span>
-                          <span className={`material-symbols-outlined text-[16px] ${species === 'Canino' ? 'text-primary' : 'text-transparent'}`}>check_circle</span>
+                          <span className={`material-symbols-outlined text-[18px] ${species === 'Canino' ? 'text-primary' : 'text-transparent'}`}>check_circle</span>
                         </button>
 
                         <button
-                          className={`species-btn flex items-center justify-between px-3.5 py-2 rounded-xl transition-all text-left ${species === 'Felino' ? 'text-primary bg-primary-fixed/30 shadow-sm font-bold' : 'text-on-surface bg-surface-container-low/70 hover:bg-surface-container font-semibold'}`}
+                          className={`species-btn flex items-center justify-between px-4 py-2.5 rounded-xl transition-all text-left ${species === 'Felino' ? 'text-primary bg-primary-fixed/30 shadow-sm font-bold ring-1 ring-primary/30' : 'text-on-surface bg-surface-container-low/70 hover:bg-surface-container font-semibold'}`}
                           id="species-felino"
                           type="button"
-                          onClick={() => {
-                            setSpecies('Felino');
-                            setExoticDetail('');
-                          }}
+                          onClick={() => setSpecies('Felino')}
                         >
                           <span className="flex items-center gap-2 font-label-md text-label-md">
-                            <span className="text-base">🐱</span>
+                            <span className="text-lg">🐱</span>
                             <span>Felino</span>
                           </span>
-                          <span className={`material-symbols-outlined text-[16px] ${species === 'Felino' ? 'text-primary' : 'text-transparent'}`}>check_circle</span>
+                          <span className={`material-symbols-outlined text-[18px] ${species === 'Felino' ? 'text-primary' : 'text-transparent'}`}>check_circle</span>
                         </button>
-                      </div>
-                    </div>
-
-                    {/* Selector alternativo: Otra especie */}
-                    <div className="md:col-span-2 flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-outline text-[16px]">info</span>
-                        <span className="font-body-sm text-body-sm text-outline">¿El paciente no es perro o gato?</span>
-                      </div>
-                      <div className="relative">
-                        <select
-                          className="bg-surface-container-low text-primary font-label-sm text-label-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                          value={species === 'Otro' ? exoticDetail : ''}
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setSpecies('Otro');
-                              setExoticDetail(e.target.value);
-                            }
-                          }}
-                        >
-                          <option value="">Seleccionar otra especie...</option>
-                          <option value="Ave / Psitácida">🦜 Ave / Psitácida</option>
-                          <option value="Conejo / Lagomorfo">🐰 Conejo / Lagomorfo</option>
-                          <option value="Pequeño Roedor">🐹 Pequeño Roedor</option>
-                          <option value="Reptil">🦎 Reptil</option>
-                          <option value="Otro animal de compañía">Otro animal de compañía</option>
-                        </select>
                       </div>
                     </div>
                   </div>
@@ -494,29 +460,36 @@ export default function RegistroPage() {
                     <span className="font-label-sm text-label-sm text-outline bg-surface-container-low px-2.5 py-1 rounded-md">Paso 2 de 2</span>
                   </div>
 
-                  {/* Servicio de Interés (Exactos del SRS y Dashboard) */}
+                  {/* Servicio de Interés (Áreas Clínicas MEDIVET) */}
                   <div className="flex flex-col gap-2">
                     <label className="font-label-sm text-label-sm text-on-surface flex items-center justify-between">
                       <span>Servicio de Interés <span className="text-error">*</span></span>
                       <span className="text-outline text-body-sm text-[11px]">Selecciona el área clínica</span>
                     </label>
-                    <div className="flex flex-wrap gap-2.5" id="services-chips">
-                      {(['Medicina General', 'Medicina Interna'] as const).map((sName) => {
-                        const isActive = servicioInteres === sName;
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="services-chips">
+                      {(
+                        [
+                          { id: 'Medicina General', label: 'Medicina General', icon: 'stethoscope' },
+                          { id: 'Medicina Interna', label: 'Medicina Interna', icon: 'monitor_heart' },
+                          { id: 'Vacunación & Desparasitación', label: 'Vacunación & Desparasitación', icon: 'vaccines' },
+                          { id: 'Cirugía/Quirófano', label: 'Cirugía / Quirófano', icon: 'medical_services' },
+                        ] as const
+                      ).map((s) => {
+                        const isActive = servicioInteres === s.id;
                         return (
                           <button
-                            key={sName}
-                            className={`service-chip flex items-center gap-2 px-4 py-2.5 rounded-xl font-label-md text-label-md transition-all shadow-xs ${
+                            key={s.id}
+                            className={`service-chip flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 px-3 py-2.5 rounded-xl font-label-md text-label-md transition-all shadow-xs text-center sm:text-left ${
                               isActive
-                                ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant font-bold ring-1 ring-tertiary/30'
+                                ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant font-bold ring-2 ring-tertiary/40 shadow-sm'
                                 : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
                             }`}
                             type="button"
-                            onClick={() => setServicioInteres(sName)}
+                            onClick={() => setServicioInteres(s.id)}
                           >
-                            <span className="text-base">{sName === 'Medicina General' ? '🩺' : '🔬'}</span>
-                            <span>{sName}</span>
-                            <span className={`material-symbols-outlined text-[16px] ${isActive ? 'text-tertiary' : 'text-transparent'}`}>check</span>
+                            <span className="material-symbols-outlined text-[20px] text-primary shrink-0">{s.icon}</span>
+                            <span className="flex-1 leading-tight">{s.label}</span>
+                            <span className={`material-symbols-outlined text-[16px] shrink-0 ${isActive ? 'text-tertiary font-bold' : 'text-transparent'}`}>check</span>
                           </button>
                         );
                       })}
@@ -537,30 +510,30 @@ export default function RegistroPage() {
                           id="opportunity-type"
                           required
                           value={tipoOportunidad}
-                          onChange={(e) => setTipoOportunidad(e.target.value as NuevoRegistroPayload['tipo_oportunidad'])}
+                          onChange={(e) => setTipoOportunidad(e.target.value as TipoOportunidad)}
                         >
                           <option value="Solicitud de información">Solicitud de información</option>
                           <option value="Cita no concretada">Cita no concretada</option>
                           <option value="Cancelación">Cancelación</option>
                           <option value="Inasistencia">Inasistencia</option>
                           <option value="Sin nueva atención registrada">Sin nueva atención registrada</option>
+                          <option value="Otros">Otros</option>
                         </select>
                         <span className="material-symbols-outlined absolute right-3 pointer-events-none text-outline text-[18px]">expand_more</span>
                       </div>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="font-label-sm text-label-sm text-on-surface flex items-center gap-1" htmlFor="main-reason">
-                        Motivo Principal
-                        <span className="text-error">*</span>
+                      <label className="font-label-sm text-label-sm text-on-surface flex items-center justify-between" htmlFor="main-reason">
+                        <span className="flex items-center gap-1">Motivo Principal</span>
+                        <span className="text-outline text-body-sm text-[11px]">Opcional</span>
                       </label>
                       <div className="relative flex items-center">
                         <span className="material-symbols-outlined absolute left-3.5 pointer-events-none text-outline text-[18px]">content_paste</span>
                         <input
                           className="w-full pl-10 pr-4 py-2.5 bg-surface-container-low/70 rounded-xl font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all shadow-inner"
                           id="main-reason"
-                          placeholder="Ej. Costo de consulta, falta de horario..."
-                          required
+                          placeholder="Ej. Costo de consulta, horario, duda médica (opcional)..."
                           type="text"
                           value={motivo}
                           onChange={(e) => setMotivo(e.target.value)}

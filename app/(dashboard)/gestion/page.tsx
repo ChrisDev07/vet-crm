@@ -10,7 +10,7 @@ interface Opportunity {
   id: number;
   tutor: string;
   pet: string;
-  species: 'Canino' | 'Felino' | 'Otro' | 'Exótico';
+  species: 'Canino' | 'Felino' | string;
   phone: string;
   service: string;
   opportunityType: string;
@@ -549,7 +549,7 @@ export default function GestionPage() {
                     <td className="py-space-md px-space-md align-middle">
                       <div className="flex items-center gap-space-sm min-w-0">
                         <div className="w-10 h-10 rounded-2xl bg-surface-container-high/60 flex items-center justify-center text-[20px] shrink-0 shadow-sm" title={item.species}>
-                          {item.species === 'Canino' ? '🐶' : item.species === 'Felino' ? '🐱' : '🦜'}
+                          {item.species === 'Canino' ? '🐶' : '🐱'}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <span className="font-label-lg text-label-lg font-bold text-on-surface truncate group-hover:text-primary transition-colors">

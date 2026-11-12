@@ -16,11 +16,11 @@ Su propósito es evitar la pérdida de pacientes por dudas de precios, horarios 
 ## ✨ Módulos y Funcionalidades
 
 * **📝 Registro Rápido de Oportunidades (`/registro` — RF-01):**
-  Formulario optimizado para recepción (< 1 minuto por captura) con registro relacional de **Tutor**, **Paciente**, **Especie** (`Canino`, `Felino`, `Otro`), **Teléfono**, **Servicio de Interés** (`Medicina General`, `Medicina Interna`), **Tipo de Oportunidad**, **Motivo**, **Observaciones** y **Fecha Propuesta de Seguimiento**.
+  Formulario optimizado para recepción (< 1 minuto por captura) con registro relacional de **Tutor**, **Paciente**, **Especie** (`Canino`, `Felino`), **Teléfono**, **Servicio de Interés** (`Medicina General`, `Medicina Interna`, `Vacunación & Desparasitación`, `Cirugía/Quirófano`), **Tipo de Oportunidad** (incluyendo `Otros`), **Motivo Principal** (opcional), **Observaciones** y **Fecha Propuesta de Seguimiento**.
 * **📋 Gestión y Seguimiento (`/gestion` — RF-02):**
   Bandeja operativa interactiva con filtro prioritario **"Llamadas de Hoy"**, barra de búsqueda, pestañas por estado (`Pendiente`, `En Proceso`, `Cita Agendada`, `Consulta Concretada`, `Rechazado`) y bitácora de resultados de contacto.
 * **📊 Tablero de Métricas Clínicas (`/dashboard` — RF-03):**
-  Cálculo automático en tiempo real de los 7 indicadores clave mediante la vista SQL `vista_metricas_dashboard`:
+  Cálculo automático en tiempo real de los indicadores clave mediante la vista SQL `vista_metricas_dashboard`:
   1. **Oportunidades Identificadas** (Total de casos registrados)
   2. **Oportunidades Gestionadas** (Casos con estado distinto a `Pendiente`)
   3. **Citas Generadas** (Casos con estado `Cita Agendada`)
@@ -28,6 +28,8 @@ Su propósito es evitar la pérdida de pacientes por dudas de precios, horarios 
   5. **Pacientes Recuperados** (Consultas concretadas tras `Inasistencia`, `Cancelación` o `Sin nueva atención registrada`)
   6. **Consultas Medicina General**
   7. **Consultas Medicina Interna**
+  8. **Consultas Vacunación & Desparasitación**
+  9. **Consultas Cirugía / Quirófano**
 * **📥 Exportación a Excel / CSV (RF-04):**
   Descarga directa tanto de la base de oportunidades como del resumen de KPIs en formato `.csv` con codificación `UTF-8 BOM` lista para Microsoft Excel.
 * **🛡️ Autenticación Real y RLS (`/login`, `/restablecer-clave` — Seguridad):**

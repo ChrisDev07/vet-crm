@@ -22,6 +22,8 @@ export default function DashboardPage() {
     pacientes_recuperados: 0,
     consultas_general: 0,
     consultas_interna: 0,
+    consultas_vacunacion: 0,
+    consultas_cirugia: 0,
     pendientes: 0,
     en_gestion: 0,
     rechazados: 0,
@@ -89,6 +91,8 @@ export default function DashboardPage() {
       ['5. Pacientes Recuperados', metrics.pacientes_recuperados, 'Recuperados tras inasistencia o cancelación', '15'],
       ['6. Consultas Medicina General', metrics.consultas_general, 'Consultas de medicina general cerradas', 'N/A'],
       ['7. Consultas Medicina Interna', metrics.consultas_interna, 'Consultas de medicina interna / derivaciones', 'N/A'],
+      ['8. Consultas Vacunación & Desparasitación', metrics.consultas_vacunacion, 'Consultas de medicina preventiva y antiparasitarios', 'N/A'],
+      ['9. Consultas Cirugía / Quirófano', metrics.consultas_cirugia, 'Procedimientos e intervenciones quirúrgicas', 'N/A'],
     ];
 
     downloadCsvFile(
@@ -102,9 +106,13 @@ export default function DashboardPage() {
   const totalConsultas = metrics.consultas_concretadas || 0;
   const pctGeneral = totalConsultas > 0 ? (metrics.consultas_general / totalConsultas) * 100 : 0;
   const pctInterna = totalConsultas > 0 ? (metrics.consultas_interna / totalConsultas) * 100 : 0;
+  const pctVacunacion = totalConsultas > 0 ? (metrics.consultas_vacunacion / totalConsultas) * 100 : 0;
+  const pctCirugia = totalConsultas > 0 ? (metrics.consultas_cirugia / totalConsultas) * 100 : 0;
   const circumference = 389.56;
   const dashGeneral = (pctGeneral / 100) * circumference;
   const dashInterna = (pctInterna / 100) * circumference;
+  const dashVacunacion = (pctVacunacion / 100) * circumference;
+  const dashCirugia = (pctCirugia / 100) * circumference;
 
   const totalBase = metrics.total_identificadas || 1;
   const pctPendientes = ((metrics.pendientes / totalBase) * 100).toFixed(1);
@@ -314,42 +322,78 @@ export default function DashboardPage() {
 
             </div>
 
-            {/* Row 2: Clinical Specialties Cards (6. Med General y 7. Med Interna) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+            {/* Row 2: Clinical Specialties Cards (4 Áreas Clínicas) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
               
-              {/* 6. Medicina General */}
+              {/* 1. Medicina General */}
               <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,104,95,0.04)] hover:shadow-[0_8px_20px_rgba(0,104,95,0.08)] transition-all flex items-center justify-between border border-transparent hover:border-primary/20">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary-fixed/40 text-primary flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[28px]">stethoscope</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-primary-fixed/40 text-primary flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">stethoscope</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="font-label-md text-label-md text-on-surface-variant">6. Especialidad Clínica</span>
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">Medicina General</span>
-                    <span className="font-body-sm text-body-sm text-primary font-medium">{((metrics.consultas_general / (metrics.consultas_concretadas || 1)) * 100).toFixed(1)}% del total de consultas cerradas</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-label-md text-label-md text-on-surface-variant">Consulta General</span>
+                    <span className="font-headline-md text-headline-md font-bold text-on-surface truncate">Med. General</span>
+                    <span className="font-body-sm text-body-sm text-primary font-medium">{pctGeneral.toFixed(1)}% de consultas</span>
                   </div>
                 </div>
                 <div className="text-right flex flex-col items-end">
-                  <span className="font-display-lg text-display-lg font-bold text-primary">{metrics.consultas_general}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Citas efectivas</span>
+                  <span className="font-headline-xl text-headline-xl font-bold text-primary">{metrics.consultas_general}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">Cerradas</span>
                 </div>
               </div>
 
-              {/* 7. Medicina Interna */}
+              {/* 2. Medicina Interna */}
               <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,104,95,0.04)] hover:shadow-[0_8px_20px_rgba(0,104,95,0.08)] transition-all flex items-center justify-between border border-transparent hover:border-secondary/20">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-secondary-fixed/50 text-secondary flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[28px]">monitor_heart</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-secondary-fixed/50 text-secondary flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">monitor_heart</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="font-label-md text-label-md text-on-surface-variant">7. Alta Complejidad</span>
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">Medicina Interna</span>
-                    <span className="font-body-sm text-body-sm text-secondary font-medium">{((metrics.consultas_interna / (metrics.consultas_concretadas || 1)) * 100).toFixed(1)}% de derivaciones especializadas</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-label-md text-label-md text-on-surface-variant">Alta Complejidad</span>
+                    <span className="font-headline-md text-headline-md font-bold text-on-surface truncate">Med. Interna</span>
+                    <span className="font-body-sm text-body-sm text-secondary font-medium">{pctInterna.toFixed(1)}% de consultas</span>
                   </div>
                 </div>
                 <div className="text-right flex flex-col items-end">
-                  <span className="font-display-lg text-display-lg font-bold text-secondary">{metrics.consultas_interna}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Citas efectivas</span>
+                  <span className="font-headline-xl text-headline-xl font-bold text-secondary">{metrics.consultas_interna}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">Cerradas</span>
+                </div>
+              </div>
+
+              {/* 3. Vacunación & Desparasitación */}
+              <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,104,95,0.04)] hover:shadow-[0_8px_20px_rgba(0,104,95,0.08)] transition-all flex items-center justify-between border border-transparent hover:border-tertiary/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-tertiary-fixed/40 text-tertiary flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">vaccines</span>
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-label-md text-label-md text-on-surface-variant">Preventiva</span>
+                    <span className="font-headline-md text-headline-md font-bold text-on-surface truncate">Vacunación</span>
+                    <span className="font-body-sm text-body-sm text-tertiary font-medium">{pctVacunacion.toFixed(1)}% de consultas</span>
+                  </div>
+                </div>
+                <div className="text-right flex flex-col items-end">
+                  <span className="font-headline-xl text-headline-xl font-bold text-tertiary">{metrics.consultas_vacunacion}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">Cerradas</span>
+                </div>
+              </div>
+
+              {/* 4. Cirugía / Quirófano */}
+              <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,104,95,0.04)] hover:shadow-[0_8px_20px_rgba(0,104,95,0.08)] transition-all flex items-center justify-between border border-transparent hover:border-amber-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">medical_services</span>
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-label-md text-label-md text-on-surface-variant">Intervenciones</span>
+                    <span className="font-headline-md text-headline-md font-bold text-on-surface truncate">Cirugía</span>
+                    <span className="font-body-sm text-body-sm text-amber-700 font-medium">{pctCirugia.toFixed(1)}% de consultas</span>
+                  </div>
+                </div>
+                <div className="text-right flex flex-col items-end">
+                  <span className="font-headline-xl text-headline-xl font-bold text-amber-700">{metrics.consultas_cirugia}</span>
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">Cerradas</span>
                 </div>
               </div>
 
@@ -385,6 +429,12 @@ export default function DashboardPage() {
                     {dashInterna > 0 && (
                       <circle className="transition-all duration-1000 ease-out" cx="80" cy="80" fill="none" r="62" stroke="#00687a" strokeDasharray={`${dashInterna.toFixed(1)} ${circumference.toFixed(1)}`} strokeDashoffset={`-${dashGeneral.toFixed(1)}`} strokeLinecap="round" strokeWidth="18"></circle>
                     )}
+                    {dashVacunacion > 0 && (
+                      <circle className="transition-all duration-1000 ease-out" cx="80" cy="80" fill="none" r="62" stroke="#00855b" strokeDasharray={`${dashVacunacion.toFixed(1)} ${circumference.toFixed(1)}`} strokeDashoffset={`-${(dashGeneral + dashInterna).toFixed(1)}`} strokeLinecap="round" strokeWidth="18"></circle>
+                    )}
+                    {dashCirugia > 0 && (
+                      <circle className="transition-all duration-1000 ease-out" cx="80" cy="80" fill="none" r="62" stroke="#d97706" strokeDasharray={`${dashCirugia.toFixed(1)} ${circumference.toFixed(1)}`} strokeDashoffset={`-${(dashGeneral + dashInterna + dashVacunacion).toFixed(1)}`} strokeLinecap="round" strokeWidth="18"></circle>
+                    )}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="font-display-lg text-display-lg font-bold text-on-surface leading-none">{metrics.consultas_concretadas}</span>
@@ -394,13 +444,13 @@ export default function DashboardPage() {
               </div>
 
               {/* Legend / Metric Chips */}
-              <div className="flex flex-col gap-space-sm pt-4 border-t-0">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors">
+              <div className="flex flex-col gap-2 pt-4 border-t-0">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors">
                   <div className="flex items-center gap-3">
                     <span className="w-3.5 h-3.5 rounded-full bg-primary ring-2 ring-primary-fixed"></span>
                     <div className="flex flex-col">
                       <span className="font-label-md text-label-md font-bold text-on-surface">Medicina General</span>
-                      <span className="font-body-sm text-body-sm text-on-surface-variant">Preventiva, vacunas, desparasitación</span>
+                      <span className="font-body-sm text-[11px] text-on-surface-variant">Consultas médicas generales</span>
                     </div>
                   </div>
                   <div className="text-right">
@@ -409,17 +459,45 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors">
                   <div className="flex items-center gap-3">
                     <span className="w-3.5 h-3.5 rounded-full bg-secondary ring-2 ring-secondary-fixed"></span>
                     <div className="flex flex-col">
                       <span className="font-label-md text-label-md font-bold text-on-surface">Medicina Interna</span>
-                      <span className="font-body-sm text-body-sm text-on-surface-variant">Cardiología, nefrología, ecografías</span>
+                      <span className="font-body-sm text-[11px] text-on-surface-variant">Especialidades complejas</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="font-label-lg text-label-lg font-bold text-secondary">{metrics.consultas_interna} citas</span>
                     <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">{pctInterna.toFixed(1)}%</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#00855b] ring-2 ring-tertiary-fixed"></span>
+                    <div className="flex flex-col">
+                      <span className="font-label-md text-label-md font-bold text-on-surface">Vacunación & Desparasitación</span>
+                      <span className="font-body-sm text-[11px] text-on-surface-variant">Preventiva y antiparasitarios</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-label-lg text-label-lg font-bold text-[#00855b]">{metrics.consultas_vacunacion} citas</span>
+                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">{pctVacunacion.toFixed(1)}%</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#d97706] ring-2 ring-amber-300"></span>
+                    <div className="flex flex-col">
+                      <span className="font-label-md text-label-md font-bold text-on-surface">Cirugía / Quirófano</span>
+                      <span className="font-body-sm text-[11px] text-on-surface-variant">Procedimientos quirúrgicos</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-label-lg text-label-lg font-bold text-[#d97706]">{metrics.consultas_cirugia} citas</span>
+                    <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">{pctCirugia.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
