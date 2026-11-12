@@ -105,6 +105,7 @@ CREATE POLICY "Permitir actualizacion autenticada de oportunidades" ON public.op
     FOR UPDATE TO authenticated USING (true);
 
 -- 6. VISTA OFICIAL DE LOS KPIS PARA EL PLAN DE MEJORAMIENTO (GRADO MVZ)
+DROP VIEW IF EXISTS public.vista_metricas_dashboard CASCADE;
 CREATE OR REPLACE VIEW public.vista_metricas_dashboard
 WITH (security_invoker = true) AS
 SELECT
