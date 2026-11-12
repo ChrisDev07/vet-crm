@@ -7,9 +7,10 @@ import { signOutUser, useAuthSession } from '@/lib/auth';
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  onChangePasswordClick?: () => void;
 }
 
-export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen = false, onClose, onChangePasswordClick }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { session } = useAuthSession();
@@ -103,6 +104,16 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             <span className="material-symbols-outlined text-[18px]">logout</span>
           </button>
         </div>
+        {onChangePasswordClick && (
+          <button
+            type="button"
+            onClick={onChangePasswordClick}
+            className="mt-2.5 pt-2.5 border-t border-surface-container w-full flex items-center justify-center gap-1.5 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors py-1 rounded-lg hover:bg-surface-container-lowest/70"
+          >
+            <span className="material-symbols-outlined text-[16px]">key</span>
+            <span>Cambiar contraseña</span>
+          </button>
+        )}
       </div>
     </aside>
   );

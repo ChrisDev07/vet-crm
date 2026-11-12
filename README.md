@@ -30,8 +30,8 @@ Su propósito es evitar la pérdida de pacientes por dudas de precios, horarios 
   7. **Consultas Medicina Interna**
 * **📥 Exportación a Excel / CSV (RF-04):**
   Descarga directa tanto de la base de oportunidades como del resumen de KPIs en formato `.csv` con codificación `UTF-8 BOM` lista para Microsoft Excel.
-* **🛡️ Autenticación Real y RLS (`/login` — Seguridad):**
-  Inicio de sesión obligatorio con correo y contraseña mediante **Supabase Authentication** ([`AuthGuard.tsx`](./components/AuthGuard.tsx)), políticas RLS restringidas únicamente al rol `authenticated`, cabeceras HTTP de seguridad en [`next.config.ts`](./next.config.ts) y navegación adaptable para PC y tablet.
+* **🛡️ Autenticación Real y RLS (`/login`, `/restablecer-clave` — Seguridad):**
+  Inicio de sesión obligatorio con correo y contraseña mediante **Supabase Authentication** ([`AuthGuard.tsx`](./components/AuthGuard.tsx)), cambio de contraseña desde el panel lateral ([`ChangePasswordModal.tsx`](./components/ChangePasswordModal.tsx)), recuperación por correo (`/restablecer-clave`), políticas RLS restringidas únicamente al rol `authenticated`, cabeceras HTTP de seguridad en [`next.config.ts`](./next.config.ts) y navegación adaptable para PC y tablet.
 * **🔎 Buscador Global tipo Spotlight (`Ctrl+K`):**
   Acceso rápido desde la barra superior para localizar tutores, pacientes o teléfonos en Supabase y saltar directamente a su seguimiento en `/gestion`.
 * **🗄️ Persistencia Real en la Nube:**
@@ -62,16 +62,19 @@ vet-crm/
 │   │   ├── registro/page.tsx    # Vista de captura de oportunidades
 │   │   ├── layout.tsx           # Layout con Sidebar, Topbar y AuthGuard
 │   │   └── page.tsx             # Pantalla de inicio y accesos rápidos
-│   ├── login/page.tsx           # Inicio de sesión con Supabase Auth
+│   ├── login/page.tsx           # Inicio de sesión y recuperación con Supabase Auth
+│   ├── restablecer-clave/page.tsx # Restablecimiento de contraseña desde enlace de correo
 │   ├── globals.css              # Design tokens y estilos Tailwind v4
 │   └── layout.tsx               # Root layout y fuentes
 ├── components/
 │   ├── AuthGuard.tsx            # Protección de rutas autenticadas
+│   ├── ChangePasswordModal.tsx  # Modal para cambio de contraseña autenticada
 │   ├── DashboardShell.tsx       # Contenedor responsivo con drawer lateral y Topbar
+│   ├── PasswordInput.tsx        # Campo de contraseña reutilizable con visibilidad
 │   ├── Sidebar.tsx              # Navegación lateral, usuario autenticado y cierre de sesión
 │   └── Topbar.tsx               # Buscador global Spotlight y notificaciones reales
 ├── lib/
-│   ├── auth.ts                  # Hooks y helpers de sesión con Supabase Auth
+│   ├── auth.ts                  # Hooks y helpers de sesión y contraseñas en Supabase Auth
 │   ├── csv.ts                   # Exportación CSV segura contra inyección de fórmulas
 │   ├── db.ts                    # Capa CRUD y consultas a Supabase
 │   └── supabaseClient.ts        # Cliente Supabase y detector de configuración
@@ -89,7 +92,8 @@ vet-crm/
 2. Ve al **SQL Editor** dentro de tu proyecto y ejecuta el contenido completo del archivo [`supabase_schema.sql`](./supabase_schema.sql).
    * Esto creará las tablas limpias `pacientes` y `oportunidades`, los índices, el trigger de actualización, las políticas RLS restringidas a usuarios autenticados (`authenticated`) y la vista `vista_metricas_dashboard`.
 3. Crea los usuarios autorizados en **Authentication → Users → Add user → Create new user** (con *Auto Confirm User* activado).
-4. Ve a **Project Settings → API Keys** y copia tu **Project URL** y tu **Anon / Publishable Key**.
+4. En **Authentication → URL Configuration**, agrega `https://tu-dominio.vercel.app/restablecer-clave` (y `http://localhost:3000/restablecer-clave` para desarrollo) en **Redirect URLs**.
+5. Ve a **Project Settings → API Keys** y copia tu **Project URL** y tu **Anon / Publishable Key**.
 
 ---
 
