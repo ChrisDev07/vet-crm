@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   crearOportunidad,
@@ -17,6 +17,41 @@ const TIME_SLOTS = [
   { id: 5, time: '04:00 PM', label: 'Media tarde', shift: 'tarde' as const },
   { id: 6, time: '05:30 PM', label: 'Último bloque tarde', shift: 'tarde' as const },
 ];
+
+const STATUS_BADGE_MAP: Record<string, string> = {
+  Pendiente: 'bg-[#fef3c7] text-[#b45309]',
+  'En Gestión': 'bg-secondary-fixed/50 text-secondary',
+  'Cita Agendada': 'bg-[#dbeafe] text-[#1d4ed8]',
+  'Consulta Concretada': 'bg-tertiary-fixed/50 text-tertiary',
+  Rechazado: 'bg-error-container text-on-error-container',
+};
+
+function buildCalendarDays(today: Date) {
+  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const fullMonthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ];
+
+  return Array.from({ length: 6 }).map((_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    return {
+      name: i === 0 ? 'Hoy' : dayNames[d.getDay()],
+      dayNum: d.getDate(),
+      monthName: monthNames[d.getMonth()],
+      fullMonthYear: `${fullMonthNames[d.getMonth()]} ${d.getFullYear()}`,
+      isoDate: d.toLocaleDateString('en-CA'),
+    };
+  });
+}
+
+function extractSlotTime(observaciones?: string | null): string | null {
+  if (!observaciones) return null;
+  const match = observaciones.match(/Franja sugerida de llamada:\s*([0-9]{2}:[0-9]{2}\s*(?:AM|PM))/i);
+  return match ? match[1].toUpperCase() : null;
+}
 
 export default function RegistroPage() {
   // Campos del formulario conectados a Supabase
@@ -40,15 +75,10 @@ export default function RegistroPage() {
   const [toastVisible, setToastVisible] = useState(false);
 
   // Panel lateral de apoyo (datos reales de Supabase)
-  const [selectedDayOffset, setSelectedDayOffset] = useState(0);
   const [shiftFilter, setShiftFilter] = useState<'todos' | 'mañana' | 'tarde'>('todos');
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [daysList, setDaysList] = useState<Array<{ name: string; dayNum: number; monthName: string; fullMonthYear: string; isoDate: string }>>([]);
-
-  const [hoyCount, setHoyCount] = useState(0);
-  const [hoyGestionadas, setHoyGestionadas] = useState(0);
-  const [ultimoRegistro, setUltimoRegistro] = useState<OportunidadConPaciente | null>(null);
-  const [scheduledForSelectedDay, setScheduledForSelectedDay] = useState<OportunidadConPaciente[]>([]);
+  const [allOpportunities, setAllOpportunities] = useState<OportunidadConPaciente[]>([]);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -62,52 +92,20 @@ export default function RegistroPage() {
     return d.toLocaleDateString('en-CA');
   };
 
-  const applySidebarStats = useCallback(
-    (all: OportunidadConPaciente[], targetDate: string) => {
-      const todayStr = new Date().toLocaleDateString('en-CA');
-      const todayList = all.filter((o) => o.fecha_registro === todayStr);
-      setHoyCount(todayList.length);
-      setHoyGestionadas(todayList.filter((o) => o.estado !== 'Pendiente').length);
-      setUltimoRegistro(all.length > 0 ? all[0] : null);
-      setScheduledForSelectedDay(
-        all.filter((o) => o.fecha_propuesta_seguimiento === targetDate)
-      );
-    },
-    []
-  );
-
-  const loadSidebarStats = useCallback(async () => {
+  const refreshOpportunities = useCallback(async () => {
     try {
       const all = await obtenerOportunidades();
-      const todayStr = new Date().toLocaleDateString('en-CA');
-      const targetDate = daysList[selectedDayOffset]?.isoDate || todayStr;
-      applySidebarStats(all, targetDate);
+      setAllOpportunities(all);
     } catch (err) {
       console.error('Error cargando resumen en Registro:', err);
     }
-  }, [applySidebarStats, daysList, selectedDayOffset]);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       const today = new Date();
       setDate(today.toLocaleDateString('en-CA'));
-
-      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      const fullMonthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-      const days = Array.from({ length: 6 }).map((_, i) => {
-        const d = new Date();
-        d.setDate(today.getDate() + i);
-        return {
-          name: i === 0 ? 'Hoy' : dayNames[d.getDay()],
-          dayNum: d.getDate(),
-          monthName: monthNames[d.getMonth()],
-          fullMonthYear: `${fullMonthNames[d.getMonth()]} ${d.getFullYear()}`,
-          isoDate: d.toLocaleDateString('en-CA'),
-        };
-      });
-      setDaysList(days);
+      setDaysList(buildCalendarDays(today));
     }, 0);
 
     return () => clearTimeout(timer);
@@ -115,22 +113,48 @@ export default function RegistroPage() {
 
   useEffect(() => {
     let cancelled = false;
-    async function syncSidebar() {
+    async function syncOpportunities() {
       try {
         const all = await obtenerOportunidades();
-        if (cancelled) return;
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        const targetDate = daysList[selectedDayOffset]?.isoDate || todayStr;
-        applySidebarStats(all, targetDate);
+        if (!cancelled) {
+          setAllOpportunities(all);
+        }
       } catch (err) {
         console.error('Error cargando resumen en Registro:', err);
       }
     }
-    void syncSidebar();
+    void syncOpportunities();
     return () => {
       cancelled = true;
     };
-  }, [applySidebarStats, daysList, selectedDayOffset]);
+  }, []);
+
+  const activeDayIndex = useMemo(() => {
+    return daysList.findIndex((d) => d.isoDate === date);
+  }, [daysList, date]);
+
+  const { hoyCount, hoyGestionadas, ultimoRegistro, scheduledForSelectedDay, unslottedForSelectedDay } =
+    useMemo(() => {
+      const todayStr = daysList[0]?.isoDate || '';
+      const targetDate = date || todayStr;
+      const todayList = todayStr
+        ? allOpportunities.filter((o) => o.fecha_registro === todayStr)
+        : [];
+      const forDay = targetDate
+        ? allOpportunities.filter((o) => o.fecha_propuesta_seguimiento === targetDate)
+        : [];
+      const unslotted = forDay.filter((o) => !extractSlotTime(o.observaciones));
+
+      return {
+        hoyCount: todayList.length,
+        hoyGestionadas: todayList.filter((o) => o.estado !== 'Pendiente').length,
+        ultimoRegistro: allOpportunities.length > 0 ? allOpportunities[0] : null,
+        scheduledForSelectedDay: forDay,
+        unslottedForSelectedDay: unslotted,
+      };
+    }, [allOpportunities, date, daysList]);
+
+  const selectedSlotObj = TIME_SLOTS.find((s) => s.id === selectedSlotId) || null;
 
   const filteredSlots = TIME_SLOTS.filter((s) => {
     if (shiftFilter === 'todos') return true;
@@ -170,8 +194,7 @@ export default function RegistroPage() {
     if (raza.trim()) extras.push(`Raza: ${raza.trim()}`);
     if (edad.trim()) extras.push(`Edad: ${edad.trim()}`);
     if (species === 'Otro' && exoticDetail.trim()) extras.push(`Detalle especie: ${exoticDetail.trim()}`);
-    const slotObj = TIME_SLOTS.find((s) => s.id === selectedSlotId);
-    if (slotObj) extras.push(`Franja sugerida de llamada: ${slotObj.time}`);
+    if (selectedSlotObj) extras.push(`Franja sugerida de llamada: ${selectedSlotObj.time}`);
 
     const fullObservations = [extras.length > 0 ? `[${extras.join(' | ')}]` : '', notes.trim()]
       .filter(Boolean)
@@ -192,7 +215,7 @@ export default function RegistroPage() {
 
       showToast(`✅ Oportunidad guardada en Supabase para ${nombrePaciente.trim()}`);
       resetForm();
-      await loadSidebarStats();
+      await refreshOpportunities();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al guardar en Supabase';
       setErrorMsg(msg);
@@ -594,6 +617,24 @@ export default function RegistroPage() {
                         <button className="quick-date-btn flex-1 py-2 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-primary-fixed/40 hover:text-primary transition-colors text-center" type="button" onClick={() => setDate(getLocalDateStr(7))}>1 sem.</button>
                       </div>
                     </div>
+                    {selectedSlotObj && (
+                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary-fixed/30 text-on-primary-fixed text-[12px] font-label-sm mt-1">
+                        <span className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[16px] text-primary shrink-0">schedule</span>
+                          <span>
+                            Franja elegida: <strong>{selectedSlotObj.time}</strong> (se guardará en Supabase al pulsar &ldquo;Guardar Oportunidad&rdquo;)
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSlotId(null)}
+                          className="text-primary hover:text-error font-bold px-1.5 shrink-0"
+                          title="Quitar franja horaria"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -636,7 +677,7 @@ export default function RegistroPage() {
                     </div>
                     <div className="flex flex-col">
                       <h3 className="font-headline-md text-headline-md text-on-surface font-bold leading-tight">Planificador de Llamadas</h3>
-                      <span className="font-body-sm text-[12px] text-on-surface-variant">Asigna fecha y franja horaria</span>
+                      <span className="font-body-sm text-[12px] text-on-surface-variant">Elige hora y ve los casos guardados</span>
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-container/20 text-tertiary font-label-sm text-[11px] font-semibold">
@@ -648,19 +689,23 @@ export default function RegistroPage() {
                 <div className="flex flex-col gap-2 pt-1">
                   <div className="flex items-center justify-between">
                     <span className="font-label-sm text-label-sm text-on-surface font-bold">
-                      {daysList[selectedDayOffset]?.fullMonthYear || 'Calendario'}
+                      {daysList[activeDayIndex >= 0 ? activeDayIndex : 0]?.fullMonthYear || 'Calendario'}
                     </span>
-                    <span className="text-[11px] text-outline">Selecciona un día</span>
+                    <span className="text-[11px] text-outline">
+                      {activeDayIndex < 0 && date ? `Fecha: ${date}` : 'Selecciona un día'}
+                    </span>
                   </div>
                   <div className="grid grid-cols-6 gap-1.5">
                     {daysList.map((d, index) => {
-                      const isSelected = selectedDayOffset === index;
+                      const isSelected = activeDayIndex === index;
+                      const dayHasBookings = allOpportunities.some(
+                        (o) => o.fecha_propuesta_seguimiento === d.isoDate
+                      );
                       return (
                         <button
                           key={d.isoDate || index}
                           type="button"
                           onClick={() => {
-                            setSelectedDayOffset(index);
                             setDate(d.isoDate);
                             setSelectedSlotId(null);
                             showToast(`📅 Fecha de seguimiento: ${d.name} ${d.dayNum} ${d.monthName}`);
@@ -677,7 +722,15 @@ export default function RegistroPage() {
                           <span className={`text-base font-bold leading-tight ${isSelected ? 'text-on-primary' : 'text-on-surface'}`}>
                             {d.dayNum}
                           </span>
-                          <span className={`w-1.5 h-1.5 rounded-full mt-1 ${isSelected ? 'bg-on-primary' : 'bg-primary/40'}`}></span>
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full mt-1 ${
+                              isSelected
+                                ? 'bg-on-primary'
+                                : dayHasBookings
+                                ? 'bg-tertiary'
+                                : 'bg-surface-container-highest'
+                            }`}
+                          ></span>
                         </button>
                       );
                     })}
@@ -720,65 +773,137 @@ export default function RegistroPage() {
                   </span>
                 </div>
 
-                {/* Franjas horarias sugeridas para seguimiento */}
-                <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-0.5">
+                {/* Franjas horarias sugeridas y asignaciones reales en Supabase */}
+                <div className="flex flex-col gap-2 max-h-[340px] overflow-y-auto pr-0.5">
                   {filteredSlots.map((slot) => {
-                    const isAssigned = selectedSlotId === slot.id;
+                    const isSelectedForForm = selectedSlotId === slot.id;
+                    const slotBookings = scheduledForSelectedDay.filter(
+                      (o) => extractSlotTime(o.observaciones) === slot.time
+                    );
+                    const hasSavedBookings = slotBookings.length > 0;
+
                     return (
                       <div
                         key={slot.id}
-                        className={`p-3 rounded-xl transition-all border flex items-center justify-between gap-3 ${
-                          isAssigned
+                        className={`p-3 rounded-xl transition-all border flex flex-col gap-2 ${
+                          isSelectedForForm
                             ? 'bg-primary-fixed/25 border-primary shadow-xs'
+                            : hasSavedBookings
+                            ? 'bg-tertiary-fixed/15 border-tertiary/30'
                             : 'bg-surface-container-low/70 hover:bg-surface-container border-transparent'
                         }`}
                       >
-                        <div className="flex items-start gap-2.5 min-w-0">
-                          <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                              isAssigned ? 'bg-primary text-on-primary' : 'bg-tertiary-fixed text-on-tertiary-fixed-variant'
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                isSelectedForForm
+                                  ? 'bg-primary text-on-primary'
+                                  : hasSavedBookings
+                                  ? 'bg-tertiary text-on-tertiary'
+                                  : 'bg-tertiary-fixed text-on-tertiary-fixed-variant'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[17px]">schedule</span>
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-label-md text-label-md text-on-surface font-bold">{slot.time}</span>
+                                {hasSavedBookings && (
+                                  <span className="px-1.5 py-0.5 rounded bg-tertiary/15 text-tertiary font-label-sm text-[10px] font-bold">
+                                    {slotBookings.length} {slotBookings.length === 1 ? 'asignado' : 'asignados'}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-body-sm text-[12px] text-on-surface-variant truncate">{slot.label}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!date) {
+                                setDate(daysList[0]?.isoDate || getLocalDateStr(0));
+                              }
+                              setSelectedSlotId(isSelectedForForm ? null : slot.id);
+                              if (!isSelectedForForm) {
+                                showToast(`⏰ Franja ${slot.time} elegida. Completa el formulario y pulsa "Guardar Oportunidad" para registrarla.`);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-label-sm font-semibold transition-all flex items-center gap-1 shrink-0 ${
+                              isSelectedForForm
+                                ? 'bg-primary text-on-primary shadow-xs'
+                                : 'bg-tertiary-container/30 text-tertiary hover:bg-tertiary hover:text-on-tertiary'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-[17px]">schedule</span>
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-label-md text-label-md text-on-surface font-bold">{slot.time}</span>
-                            <span className="text-body-sm text-[12px] text-on-surface-variant truncate">{slot.label}</span>
-                          </div>
+                            {isSelectedForForm ? (
+                              <>
+                                <span className="material-symbols-outlined text-[14px]">check</span>
+                                <span>Elegida</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="material-symbols-outlined text-[14px]">add</span>
+                                <span>Elegir hora</span>
+                              </>
+                            )}
+                          </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const dayObj = daysList[selectedDayOffset];
-                            if (dayObj) setDate(dayObj.isoDate);
-                            setSelectedSlotId(isAssigned ? null : slot.id);
-                            if (!isAssigned) {
-                              showToast(`✅ Franja ${slot.time} asignada al seguimiento`);
-                            }
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-[11px] font-label-sm font-semibold transition-all flex items-center gap-1 shrink-0 ${
-                            isAssigned
-                              ? 'bg-primary text-on-primary shadow-xs'
-                              : 'bg-tertiary-container/30 text-tertiary hover:bg-tertiary hover:text-on-tertiary'
-                          }`}
-                        >
-                          {isAssigned ? (
-                            <>
-                              <span className="material-symbols-outlined text-[14px]">check</span>
-                              <span>Asignado</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="material-symbols-outlined text-[14px]">add</span>
-                              <span>Asignar</span>
-                            </>
-                          )}
-                        </button>
+                        {hasSavedBookings && (
+                          <div className="flex flex-col gap-1.5 pt-2 border-t border-surface-container">
+                            {slotBookings.map((booking) => (
+                              <Link
+                                key={booking.id}
+                                href={`/gestion?q=${encodeURIComponent(booking.pacientes?.nombre_paciente || '')}`}
+                                className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-surface-container-lowest/90 hover:bg-surface-container-lowest transition-colors text-[11px]"
+                              >
+                                <span className="font-semibold text-on-surface truncate">
+                                  🐾 {booking.pacientes?.nombre_paciente} • {booking.pacientes?.nombre_tutor}
+                                </span>
+                                <span
+                                  className={`px-1.5 py-0.5 rounded font-semibold shrink-0 text-[10px] ${
+                                    STATUS_BADGE_MAP[booking.estado] || 'bg-surface-container text-on-surface-variant'
+                                  }`}
+                                >
+                                  {booking.estado}
+                                </span>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
+
+                {unslottedForSelectedDay.length > 0 && (
+                  <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-surface-container-low/80 border border-surface-container">
+                    <span className="font-label-sm text-[11px] text-on-surface-variant font-bold">
+                      Guardados para este día (sin franja fija)
+                    </span>
+                    <div className="flex flex-col gap-1 max-h-28 overflow-y-auto">
+                      {unslottedForSelectedDay.map((booking) => (
+                        <Link
+                          key={booking.id}
+                          href={`/gestion?q=${encodeURIComponent(booking.pacientes?.nombre_paciente || '')}`}
+                          className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-white transition-colors text-[11px]"
+                        >
+                          <span className="font-medium text-on-surface truncate">
+                            🐾 {booking.pacientes?.nombre_paciente} • {booking.pacientes?.nombre_tutor}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-semibold shrink-0 text-[10px] ${
+                              STATUS_BADGE_MAP[booking.estado] || 'bg-surface-container text-on-surface-variant'
+                            }`}
+                          >
+                            {booking.estado}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Métrica Real del Día desde Supabase */}
                 <div className="p-4 rounded-xl bg-surface-container-low flex flex-col gap-2.5 mt-1">

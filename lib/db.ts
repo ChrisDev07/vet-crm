@@ -132,7 +132,8 @@ export async function obtenerOportunidades(): Promise<OportunidadConPaciente[]> 
         especie
       )
     `)
-    .order('fecha_registro', { ascending: false });
+    .order('fecha_registro', { ascending: false })
+    .order('id', { ascending: false });
 
   if (error) {
     console.error('Error al obtener oportunidades:', error);
