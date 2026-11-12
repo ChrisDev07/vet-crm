@@ -32,6 +32,8 @@ export default function DashboardPage() {
         const dbData = await obtenerMetricasDashboard(dias);
         setMetrics(dbData);
         setIsLiveFromDb(true);
+        const now = new Date();
+        setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
       } catch (err) {
         console.error('Error al cargar métricas de Supabase:', err);
       }
@@ -39,10 +41,24 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const now = new Date();
-    setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-    loadData(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    async function initDashboard() {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const dbData = await obtenerMetricasDashboard(0);
+        if (cancelled) return;
+        setMetrics(dbData);
+        setIsLiveFromDb(true);
+        const now = new Date();
+        setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+      } catch (err) {
+        console.error('Error al cargar métricas de Supabase:', err);
+      }
+    }
+    void initDashboard();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const showToast = (msg: string) => {
@@ -55,8 +71,6 @@ export default function DashboardPage() {
     setIsRefreshing(true);
     await loadData(daysFilter);
     setIsRefreshing(false);
-    const now = new Date();
-    setSyncTime(`Hoy a las ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
     showToast(isSupabaseConfigured() ? '🔄 Métricas sincronizadas con Supabase (PostgreSQL)' : '⚠️ Supabase no configurado');
   };
 
@@ -103,7 +117,7 @@ export default function DashboardPage() {
   const pctRechazados = ((metrics.rechazados / totalBase) * 100).toFixed(1);
 
   return (
-    <main className="relative pt-20 bg-surface min-h-screen px-gutter py-space-md">
+    <main className="relative pt-24 bg-surface min-h-screen px-4 sm:px-gutter pb-space-lg">
       <div className="flex flex-col w-full">
         
         {/* Dynamic Atmospheric Glow */}
@@ -129,13 +143,13 @@ export default function DashboardPage() {
             {/* Main Header Bar */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <h1 className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">
                     Tablero de <span className="text-primary">Métricas Clínicas</span>
                   </h1>
                   <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-                    {isLiveFromDb ? 'Supabase en Tiempo Real' : 'Modo Demo Local'}
+                    {isLiveFromDb ? 'Supabase en Tiempo Real' : 'Sin conexión BD'}
                   </span>
                 </div>
                 <p className="font-body-md text-body-md text-on-surface-variant">
@@ -411,14 +425,6 @@ export default function DashboardPage() {
                     <span className="block font-label-sm text-label-sm text-on-surface-variant font-semibold">{pctInterna.toFixed(1)}%</span>
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-primary-fixed/20 text-on-surface mt-1">
-                  <span className="font-label-sm text-label-sm text-primary font-semibold flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px]">payments</span>
-                    Ticket Promedio Estimado
-                  </span>
-                  <span className="font-label-md text-label-md font-bold text-on-surface">$145.000 COP</span>
-                </div>
               </div>
             </div>
 
@@ -511,7 +517,7 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-tertiary font-body-sm text-body-sm font-semibold">+${(metrics.consultas_concretadas * 145000).toLocaleString('es-CO')} COP</span>
+                        <span className="text-tertiary font-body-sm text-body-sm font-semibold">Atención efectiva</span>
                         <span className="font-bold text-primary">{pctConcretadas}%</span>
                       </div>
                     </div>
@@ -544,7 +550,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Funnel Meta Insights */}
-              <div className="grid grid-cols-2 gap-space-sm pt-6 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm pt-6 mt-4">
                 <div className="bg-surface-container-low/50 p-3.5 rounded-xl flex items-center gap-3">
                   <span className="material-symbols-outlined text-tertiary text-[24px]">speed</span>
                   <div>

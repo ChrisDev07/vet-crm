@@ -32,21 +32,18 @@ export default function GestionPage() {
   const [toastVisible, setToastVisible] = useState<boolean>(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get('q');
-      if (q) {
-        setSearchQuery(q);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
+    let cancelled = false;
     async function loadData() {
-      setIsLoading(true);
+      const nextSearch =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('q') || ''
+          : '';
+
       if (isSupabaseConfigured()) {
         try {
           const dbData = await obtenerOportunidades();
+          if (cancelled) return;
+
           const todayStr = new Date().toLocaleDateString('en-CA');
           const mapped: Opportunity[] = dbData.map((d) => ({
             id: d.id,
@@ -66,11 +63,21 @@ export default function GestionPage() {
           console.error('Error cargando de Supabase:', e);
         }
       } else {
+        await Promise.resolve();
+        if (cancelled) return;
         setOpportunities([]);
+      }
+
+      if (nextSearch) {
+        setSearchQuery(nextSearch);
       }
       setIsLoading(false);
     }
-    loadData();
+
+    void loadData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const showToast = (msg: string) => {
@@ -88,6 +95,10 @@ export default function GestionPage() {
       citas: opportunities.filter(o => o.status === 'Cita Agendada').length,
       concretadas: opportunities.filter(o => o.status === 'Consulta Concretada').length,
       rechazados: opportunities.filter(o => o.status === 'Rechazado').length,
+      hoy: opportunities.filter(o => o.isToday).length,
+      hoyPendientes: opportunities.filter(
+        o => o.isToday && (o.status === 'Pendiente' || o.status === 'En Proceso')
+      ).length,
     };
   }, [opportunities]);
 
@@ -220,7 +231,7 @@ export default function GestionPage() {
   };
 
   return (
-    <main className="w-full pt-20 px-space-lg pb-space-xl bg-background min-h-screen">
+    <main className="w-full pt-24 px-4 sm:px-space-lg pb-space-xl bg-background min-h-screen">
       <div className="flex flex-col w-full">
         
         {/* Breadcrumbs & Quick Header Section */}
@@ -238,7 +249,7 @@ export default function GestionPage() {
 
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
             <div>
-              <div className="flex items-center gap-space-sm">
+              <div className="flex flex-wrap items-center gap-space-sm">
                 <h1 className="font-headline-xl text-headline-xl text-on-surface tracking-tight">Gestión y Seguimiento</h1>
                 <span className="px-space-sm py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">
                   En Vivo
@@ -347,28 +358,42 @@ export default function GestionPage() {
             </div>
           </div>
 
-          {/* KPI 4: Tiempo de Respuesta */}
-          <div className="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden border border-transparent hover:border-secondary/20 transition-all">
+          {/* KPI 4: Llamadas de Hoy */}
+          <button
+            type="button"
+            onClick={() => setDateFilter((prev) => (prev === 'hoy' ? 'todos' : 'hoy'))}
+            className={`text-left bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col justify-between relative overflow-hidden border transition-all ${
+              dateFilter === 'hoy'
+                ? 'border-secondary ring-2 ring-secondary/15'
+                : 'border-transparent hover:border-secondary/20'
+            }`}
+            title={dateFilter === 'hoy' ? 'Quitar filtro de llamadas de hoy' : 'Ver solo llamadas programadas para hoy'}
+          >
             <div className="flex items-center justify-between mb-space-sm">
               <div className="flex items-center gap-space-xs">
                 <span className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
-                  <span className="material-symbols-outlined text-[20px]">timer</span>
+                  <span className="material-symbols-outlined text-[20px]">today</span>
                 </span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Tiempo Respuesta</span>
+                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Llamadas de Hoy</span>
               </div>
-              <span className="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-low px-2 py-0.5 rounded-full font-medium">WhatsApp</span>
+              <span className={`font-label-sm text-label-sm px-2 py-0.5 rounded-full font-medium ${
+                dateFilter === 'hoy'
+                  ? 'bg-secondary text-on-secondary'
+                  : 'text-on-surface-variant bg-surface-container-low'
+              }`}>
+                {dateFilter === 'hoy' ? 'Filtro activo' : 'Agenda diaria'}
+              </span>
             </div>
             <div className="flex items-baseline justify-between mt-space-xs">
               <div className="flex items-baseline gap-space-xs">
-                <span className="font-display-lg text-display-lg font-bold text-on-surface">38</span>
-                <span className="font-headline-md text-headline-md text-outline">min</span>
+                <span className="font-display-lg text-display-lg font-bold text-on-surface">{counts.hoy}</span>
+                <span className="font-body-sm text-body-sm text-outline">programadas</span>
               </div>
-              <span className="font-label-sm text-label-sm text-tertiary flex items-center font-semibold">
-                <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
-                Óptimo
+              <span className="font-label-sm text-label-sm text-secondary flex items-center font-semibold">
+                {counts.hoyPendientes} por gestionar
               </span>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Filters, Tabs & Main Interactive Table Section */}
@@ -491,7 +516,7 @@ export default function GestionPage() {
               <div className="relative">
                 <select 
                   value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value as any)}
+                  onChange={(e) => setDateFilter(e.target.value as 'todos' | 'hoy' | 'semana')}
                   className="bg-surface-container-low text-on-surface font-label-md text-label-md rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer appearance-none pr-8"
                 >
                   <option value="todos">Todos los periodos</option>

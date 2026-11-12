@@ -62,49 +62,75 @@ export default function RegistroPage() {
     return d.toLocaleDateString('en-CA');
   };
 
-  const loadSidebarStats = useCallback(async () => {
-    try {
-      const all = await obtenerOportunidades();
+  const applySidebarStats = useCallback(
+    (all: OportunidadConPaciente[], targetDate: string) => {
       const todayStr = new Date().toLocaleDateString('en-CA');
       const todayList = all.filter((o) => o.fecha_registro === todayStr);
       setHoyCount(todayList.length);
       setHoyGestionadas(todayList.filter((o) => o.estado !== 'Pendiente').length);
       setUltimoRegistro(all.length > 0 ? all[0] : null);
-
-      const targetDate = daysList[selectedDayOffset]?.isoDate || todayStr;
       setScheduledForSelectedDay(
         all.filter((o) => o.fecha_propuesta_seguimiento === targetDate)
       );
+    },
+    []
+  );
+
+  const loadSidebarStats = useCallback(async () => {
+    try {
+      const all = await obtenerOportunidades();
+      const todayStr = new Date().toLocaleDateString('en-CA');
+      const targetDate = daysList[selectedDayOffset]?.isoDate || todayStr;
+      applySidebarStats(all, targetDate);
     } catch (err) {
       console.error('Error cargando resumen en Registro:', err);
     }
-  }, [daysList, selectedDayOffset]);
+  }, [applySidebarStats, daysList, selectedDayOffset]);
 
   useEffect(() => {
-    const today = new Date();
-    setDate(today.toLocaleDateString('en-CA'));
+    const timer = setTimeout(() => {
+      const today = new Date();
+      setDate(today.toLocaleDateString('en-CA'));
 
-    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    const fullMonthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const fullMonthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-    const days = Array.from({ length: 6 }).map((_, i) => {
-      const d = new Date();
-      d.setDate(today.getDate() + i);
-      return {
-        name: i === 0 ? 'Hoy' : dayNames[d.getDay()],
-        dayNum: d.getDate(),
-        monthName: monthNames[d.getMonth()],
-        fullMonthYear: `${fullMonthNames[d.getMonth()]} ${d.getFullYear()}`,
-        isoDate: d.toLocaleDateString('en-CA'),
-      };
-    });
-    setDaysList(days);
+      const days = Array.from({ length: 6 }).map((_, i) => {
+        const d = new Date();
+        d.setDate(today.getDate() + i);
+        return {
+          name: i === 0 ? 'Hoy' : dayNames[d.getDay()],
+          dayNum: d.getDate(),
+          monthName: monthNames[d.getMonth()],
+          fullMonthYear: `${fullMonthNames[d.getMonth()]} ${d.getFullYear()}`,
+          isoDate: d.toLocaleDateString('en-CA'),
+        };
+      });
+      setDaysList(days);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    loadSidebarStats();
-  }, [loadSidebarStats]);
+    let cancelled = false;
+    async function syncSidebar() {
+      try {
+        const all = await obtenerOportunidades();
+        if (cancelled) return;
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const targetDate = daysList[selectedDayOffset]?.isoDate || todayStr;
+        applySidebarStats(all, targetDate);
+      } catch (err) {
+        console.error('Error cargando resumen en Registro:', err);
+      }
+    }
+    void syncSidebar();
+    return () => {
+      cancelled = true;
+    };
+  }, [applySidebarStats, daysList, selectedDayOffset]);
 
   const filteredSlots = TIME_SLOTS.filter((s) => {
     if (shiftFilter === 'todos') return true;
@@ -188,8 +214,8 @@ export default function RegistroPage() {
   const hoyProgress = hoyCount > 0 ? Math.round((hoyGestionadas / hoyCount) * 100) : 0;
 
   return (
-    <main className="w-full pt-20 px-space-lg pb-space-xl bg-background min-h-screen">
-      <div className="flex flex-col w-full">
+    <main className="w-full pt-24 px-4 sm:px-space-lg pb-space-xl bg-background min-h-screen">
+      <div className="flex flex-col w-full overflow-x-hidden">
         <div className="relative w-full">
           <div className="absolute -top-10 right-20 w-72 h-72 bg-primary-fixed/20 rounded-full blur-3xl pointer-events-none -z-10"></div>
           <div className="absolute top-96 left-10 w-96 h-96 bg-secondary-fixed/15 rounded-full blur-3xl pointer-events-none -z-10"></div>
@@ -207,7 +233,7 @@ export default function RegistroPage() {
                 <span className="text-outline-variant">/</span>
                 <span className="text-primary font-semibold">Registrar</span>
               </nav>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <h1 className="font-headline-xl text-headline-xl text-on-surface tracking-tight">Nueva Oportunidad</h1>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-tertiary-container/15 text-tertiary font-label-sm text-label-sm">
                   <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>

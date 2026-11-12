@@ -1,19 +1,9 @@
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
-import ShiftGuard from "@/components/ShiftGuard";
+import DashboardShell from '@/components/DashboardShell';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <ShiftGuard>
-      <Sidebar />
-      <div className="pl-72">
-        <Topbar />
-        {children}
-      </div>
-    </ShiftGuard>
-  );
+  return <DashboardShell>{children}</DashboardShell>;
 }

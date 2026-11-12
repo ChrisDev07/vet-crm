@@ -31,11 +31,11 @@ Su propósito es evitar la pérdida de pacientes por dudas de precios, horarios 
 * **📥 Exportación a Excel / CSV (RF-04):**
   Descarga directa tanto de la base de oportunidades como del resumen de KPIs en formato `.csv` con codificación `UTF-8 BOM` lista para Microsoft Excel.
 * **🛡️ Control de Turno / ShiftGuard (`/login` — RF-05):**
-  Selección de turno laboral (*Turno Mañana* / *Turno Tarde*) con protección de acceso a las rutas del panel clínico.
+  Selección rápida de turno laboral (*Turno Mañana* / *Turno Tarde*) persistida en el navegador, visible en la barra lateral y en inicio, con protección de acceso a las rutas del panel clínico y navegación adaptable para PC y tablet.
 * **🔎 Buscador Global tipo Spotlight (`Ctrl+K`):**
-  Acceso rápido desde la barra superior para localizar tutores, pacientes o teléfonos y saltar directamente a su seguimiento en `/gestion`.
-* **🔄 Modo Híbrido (Live + Demo):**
-  Si las credenciales de Supabase están configuradas en `.env.local`, opera con persistencia real en PostgreSQL; de lo contrario, funciona en modo demostración local sin interrupciones.
+  Acceso rápido desde la barra superior para localizar tutores, pacientes o teléfonos en Supabase y saltar directamente a su seguimiento en `/gestion`.
+* **🗄️ Persistencia Real en la Nube:**
+  Conectado directamente a Supabase (PostgreSQL) sin datos ficticios ni de prueba; cada oportunidad registrada en `/registro` y cada cambio en `/gestion` se refleja al instante en las métricas y notificaciones.
 
 ---
 
@@ -66,14 +66,15 @@ vet-crm/
 │   ├── globals.css              # Design tokens y estilos Tailwind v4
 │   └── layout.tsx               # Root layout y fuentes
 ├── components/
-│   ├── forms/RegistroForm.tsx   # Formulario de captura rápida
+│   ├── DashboardShell.tsx       # Contenedor responsivo con drawer lateral y Topbar
 │   ├── ShiftGuard.tsx           # Guardia de turno activo
-│   ├── Sidebar.tsx              # Navegación lateral y cierre de turno
-│   └── Topbar.tsx               # Buscador global Spotlight y notificaciones
+│   ├── Sidebar.tsx              # Navegación lateral, turno activo y cierre de sesión
+│   └── Topbar.tsx               # Buscador global Spotlight y notificaciones reales
 ├── lib/
 │   ├── db.ts                    # Capa CRUD y consultas a Supabase
+│   ├── shift.ts                 # Gestión reactiva del turno activo en localStorage
 │   └── supabaseClient.ts        # Cliente Supabase y detector de configuración
-├── supabase_schema.sql          # Esquema oficial PostgreSQL (tablas, índices, vista y seed)
+├── supabase_schema.sql          # Esquema oficial PostgreSQL (tablas, índices, RLS y vista)
 ├── .env.local.example           # Plantilla de variables de entorno
 ├── Dockerfile                   # Imagen Docker de desarrollo/ejecución
 └── docker-compose.yml           # Orquestación local en el puerto 3000
@@ -85,8 +86,8 @@ vet-crm/
 
 1. Crea un proyecto gratuito en **[supabase.com](https://supabase.com)**.
 2. Ve al **SQL Editor** dentro de tu proyecto y ejecuta el contenido completo del archivo [`supabase_schema.sql`](./supabase_schema.sql).
-   * Esto creará las tablas `pacientes` y `oportunidades`, los índices, el trigger de actualización, las políticas RLS, la vista `vista_metricas_dashboard` y 8 registros iniciales de prueba.
-3. Ve a **Project Settings → Data API / API Keys** y copia tu **Project URL** y tu **Anon / Publishable Key**.
+   * Esto creará las tablas limpias `pacientes` y `oportunidades`, los índices, el trigger de actualización, las políticas RLS y la vista `vista_metricas_dashboard`.
+3. Ve a **Project Settings → API Keys** y copia tu **Project URL** y tu **Anon / Publishable Key**.
 
 ---
 
@@ -99,10 +100,10 @@ cd vet-crm
 cp .env.local.example .env.local
 ```
 
-Edita `.env.local` con tus credenciales de Supabase:
+Edita `.env.local` con tus credenciales de Supabase (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` o `NEXT_PUBLIC_SUPABASE_ANON_KEY`):
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-clave-anon-o-publishable-aqui
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=tu-clave-publishable-o-anon-aqui
 ```
 
 ### 2. Ejecutar con Node.js
@@ -132,5 +133,5 @@ docker compose up -d --build
 
 El proyecto está listo para desplegarse gratuitamente en **Vercel**:
 1. Importa el repositorio `ChrisDev07/vet-crm` en [vercel.com](https://vercel.com).
-2. Agrega las variables de entorno `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` en la configuración del proyecto.
+2. Agrega las variables de entorno `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (o `NEXT_PUBLIC_SUPABASE_ANON_KEY`) en la configuración del proyecto.
 3. Haz clic en **Deploy**.

@@ -1,12 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { setActiveShift, ShiftType } from '@/lib/shift';
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const handleSelectShift = (shift: 'mañana' | 'tarde') => {
-    localStorage.setItem('medivet_shift', shift);
+  const handleSelectShift = (shift: ShiftType) => {
+    setActiveShift(shift);
     router.push('/');
   };
 

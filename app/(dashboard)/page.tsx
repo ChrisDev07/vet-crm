@@ -1,20 +1,32 @@
+'use client';
+
 import Link from 'next/link';
+import { getShiftMetadata, useActiveShift } from '@/lib/shift';
 
 export default function Home() {
+  const activeShift = useActiveShift();
+  const shiftMeta = getShiftMetadata(activeShift);
+
   return (
-    <div className="w-full pt-20 px-space-lg pb-space-xl bg-background min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
+    <div className="w-full pt-24 px-4 sm:px-space-lg pb-space-xl bg-background min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
       {/* Decorative Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-fixed/20 rounded-full blur-3xl pointer-events-none -z-10"></div>
-      
-      <div className="bg-surface-container-low/70 backdrop-blur-md p-12 rounded-3xl border border-white shadow-xl text-center max-w-2xl">
-        <span className="material-symbols-outlined text-[64px] text-primary mb-6 animate-bounce">waving_hand</span>
-        <h1 className="font-display-lg text-display-lg text-on-surface mb-4">
-          ¡Hola, <span className="text-primary">María</span>!
+
+      <div className="bg-surface-container-low/70 backdrop-blur-md p-6 sm:p-12 rounded-3xl border border-white shadow-xl text-center max-w-2xl w-full">
+        <span className="material-symbols-outlined text-[56px] sm:text-[64px] text-primary mb-4">waving_hand</span>
+        <div className="mb-3">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-semibold">
+            <span className="material-symbols-outlined text-[15px]">{shiftMeta.icon}</span>
+            {shiftMeta.label} • {shiftMeta.hours}
+          </span>
+        </div>
+        <h1 className="font-display-lg text-headline-xl sm:text-display-lg text-on-surface mb-4">
+          Recepción <span className="text-primary">MEDIVET</span>
         </h1>
-        <p className="font-body-lg text-body-lg text-on-surface-variant mb-8">
-          Bienvenida al nuevo CRM Clínico de MEDIVET. Utiliza el menú lateral para navegar entre las diferentes herramientas.
+        <p className="font-body-lg text-body-md sm:text-body-lg text-on-surface-variant mb-8">
+          CRM Clínico de oportunidades de atención veterinaria conectado en tiempo real a Supabase.
         </p>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link href="/registro" className="group p-4 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md hover:bg-surface-container-low hover:-translate-y-1 transition-all flex items-start gap-3 text-left border border-transparent hover:border-tertiary/20">
             <div className="w-10 h-10 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">

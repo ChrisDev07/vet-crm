@@ -14,14 +14,21 @@ interface Notificacion {
   petName?: string;
 }
 
-export default function Topbar() {
+interface TopbarProps {
+  onMenuClick?: () => void;
+}
+
+export default function Topbar({ onMenuClick }: TopbarProps) {
   const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notificacion[]>([]);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadNotifications() {
       const oportunidades = await obtenerOportunidades();
+      if (cancelled) return;
+
       const todayStr = new Date().toLocaleDateString('en-CA');
       const pendientes = oportunidades.filter(
         (o) =>
@@ -39,7 +46,10 @@ export default function Topbar() {
       }));
       setNotifications(items);
     }
-    loadNotifications();
+    void loadNotifications();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,12 +57,16 @@ export default function Topbar() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsSearchFocused(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
     };
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -70,63 +84,86 @@ export default function Topbar() {
     };
   }, []);
 
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setSearchResults([]);
-      return;
-    }
+  const trimmedQuery = searchQuery.trim();
 
+  useEffect(() => {
+    if (!trimmedQuery) return;
+
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setIsSearching(true);
-      const results = await buscarPacientesYOportunidades(searchQuery);
-      setSearchResults(results);
-      setIsSearching(false);
+      const results = await buscarPacientesYOportunidades(trimmedQuery);
+      if (!cancelled) {
+        setSearchResults(results);
+        setIsSearching(false);
+      }
     }, 200);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [trimmedQuery]);
+
+  const visibleResults = trimmedQuery ? searchResults : [];
 
   const handleSelectResult = (result: ResultadoBusqueda) => {
     setIsSearchFocused(false);
     setSearchQuery('');
+    setSearchResults([]);
     router.push(`/gestion?q=${encodeURIComponent(result.nombre_paciente)}`);
   };
 
   const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, unread: false })));
+    setNotifications(notifications.map((n) => ({ ...n, unread: false })));
   };
 
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
-    <header className="fixed top-0 left-72 right-0 h-20 bg-surface-container-lowest/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.03)] z-40 px-space-lg flex items-center justify-between">
-      
-      {/* LEFT: Search and Status */}
-      <div className="flex items-center gap-space-md flex-1 max-w-xl">
-        <div ref={searchRef} className="relative w-full max-w-md z-50">
+    <header className="fixed top-0 left-0 lg:left-72 right-0 h-20 bg-surface-container-lowest/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.03)] z-30 px-4 sm:px-space-lg flex items-center justify-between gap-3">
+      {/* LEFT: Mobile Menu Trigger + Search + Status */}
+      <div className="flex items-center gap-3 sm:gap-space-md flex-1 max-w-xl min-w-0">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-xl bg-surface-container-low text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors shrink-0"
+          aria-label="Abrir menú de navegación"
+        >
+          <span className="material-symbols-outlined text-[22px]">menu</span>
+        </button>
+
+        <div ref={searchRef} className="relative w-full max-w-md z-40">
           <span className="material-symbols-outlined absolute left-3 top-1/2 pointer-events-none -translate-y-1/2 text-outline text-[18px]">search</span>
-          <input 
+          <input
             ref={inputRef}
-            className="w-full pl-9 pr-4 py-2 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all shadow-inner" 
-            placeholder="Buscar tutor o paciente... (Ctrl+K)" 
+            className="w-full pl-9 pr-4 py-2 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all shadow-inner"
+            placeholder="Buscar tutor o paciente... (Ctrl+K)"
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              setSearchQuery(nextValue);
+              if (nextValue.trim() === '') {
+                setSearchResults([]);
+                setIsSearching(false);
+              }
+            }}
             onFocus={() => setIsSearchFocused(true)}
           />
-          
+
           {/* Spotlight Dropdown */}
-          {isSearchFocused && searchQuery.trim() !== '' && (
+          {isSearchFocused && trimmedQuery !== '' && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container-low overflow-hidden animate-in fade-in slide-in-from-top-2">
               <div className="p-2 border-b border-surface-container-low/50 bg-surface-container-low/30 flex items-center justify-between">
                 <span className="font-label-sm text-label-sm text-outline px-2">Resultados rápidos</span>
                 <span className="font-label-sm text-label-sm text-primary px-2">
-                  {isSearching ? 'Buscando...' : `${searchResults.length} encontrados`}
+                  {isSearching ? 'Buscando...' : `${visibleResults.length} encontrados`}
                 </span>
               </div>
               <div className="flex flex-col max-h-96 overflow-y-auto">
-                {searchResults.length > 0 ? (
-                  searchResults.map(result => (
+                {visibleResults.length > 0 ? (
+                  visibleResults.map((result) => (
                     <button
                       key={result.id}
                       type="button"
@@ -165,21 +202,20 @@ export default function Topbar() {
             </div>
           )}
         </div>
-        <div className="hidden xl:flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant">
+        <div className="hidden xl:flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant shrink-0">
           <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
           <span>Recepción Activa</span>
         </div>
       </div>
-      
-      {/* RIGHT: Notifications & User Actions */}
-      <div className="flex items-center gap-4 relative">
-        
-        {/* Notification Bell */}
-        <div className="relative">
-          <button 
+
+      {/* RIGHT: Notifications */}
+      <div className="flex items-center gap-4 relative shrink-0">
+        <div ref={notifRef} className="relative">
+          <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className={`relative p-2.5 rounded-full transition-colors ${showNotifications ? 'bg-primary-fixed text-primary' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`} 
+            className={`relative p-2.5 rounded-full transition-colors ${showNotifications ? 'bg-primary-fixed text-primary' : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}`}
             type="button"
+            aria-label="Notificaciones"
           >
             <span className="material-symbols-outlined text-[24px]">notifications</span>
             {unreadCount > 0 && (
@@ -187,19 +223,18 @@ export default function Topbar() {
             )}
           </button>
 
-          {/* Notifications Dropdown Panel */}
           {showNotifications && (
-            <div className="absolute top-full right-0 mt-3 w-80 bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container-low overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+            <div className="absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] sm:w-80 bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container-low overflow-hidden z-40 animate-in fade-in slide-in-from-top-2">
               <div className="flex items-center justify-between p-4 border-b border-surface-container-low bg-surface-container/30">
                 <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">Notificaciones</h3>
                 {unreadCount > 0 && (
-                  <button onClick={markAllAsRead} className="text-primary font-label-sm text-label-sm hover:underline">
+                  <button onClick={markAllAsRead} className="text-primary font-label-sm text-label-sm hover:underline" type="button">
                     Marcar leídas
                   </button>
                 )}
               </div>
               <div className="flex flex-col max-h-80 overflow-y-auto">
-                {notifications.map(notif => (
+                {notifications.map((notif) => (
                   <div
                     key={notif.id}
                     onClick={() => {
@@ -229,7 +264,6 @@ export default function Topbar() {
             </div>
           )}
         </div>
-        
       </div>
     </header>
   );

@@ -1,20 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useActiveShift } from '@/lib/shift';
 
 export default function ShiftGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
+  const shift = useActiveShift();
 
   useEffect(() => {
-    const shift = localStorage.getItem('medivet_shift');
-    if (!shift) {
+    if (shift === null) {
       router.push('/login');
-    } else {
-      setIsReady(true);
     }
-  }, [router]);
+  }, [router, shift]);
+
+  const isReady = shift === 'mañana' || shift === 'tarde';
 
   return (
     <>
