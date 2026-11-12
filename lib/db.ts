@@ -154,12 +154,18 @@ export async function actualizarEstadoOportunidad(
     throw new Error('Supabase no está configurado');
   }
 
+  const updatePayload: {
+    estado: 'Pendiente' | 'En Gestión' | 'Cita Agendada' | 'Consulta Concretada' | 'Rechazado';
+    resultado_gestion?: string | null;
+  } = { estado };
+
+  if (resultado_gestion !== undefined) {
+    updatePayload.resultado_gestion = resultado_gestion || null;
+  }
+
   const { data, error } = await supabase
     .from('oportunidades')
-    .update({
-      estado,
-      resultado_gestion: resultado_gestion || null,
-    })
+    .update(updatePayload)
     .eq('id', id)
     .select()
     .single();
