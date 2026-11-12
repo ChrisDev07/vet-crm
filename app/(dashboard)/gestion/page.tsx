@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { obtenerOportunidades, actualizarEstadoOportunidad } from '@/lib/db';
+import { downloadCsvFile } from '@/lib/csv';
 import { isSupabaseConfigured } from '@/lib/supabaseClient';
 
 interface Opportunity {
@@ -205,28 +206,24 @@ export default function GestionPage() {
   // Export to CSV (RF-04)
   const handleExportCSV = () => {
     const headers = ['ID', 'Tutor', 'Mascota', 'Especie', 'Telefono', 'Servicio', 'Tipo_Oportunidad', 'Motivo_Notas', 'Fecha_Propuesta', 'Estado'];
-    const rows = opportunities.map(o => [
+    const rows = opportunities.map((o) => [
       o.id,
-      `"${o.tutor}"`,
-      `"${o.pet}"`,
-      `"${o.species}"`,
-      `"${o.phone}"`,
-      `"${o.service}"`,
-      `"${o.opportunityType}"`,
-      `"${o.notes.replace(/"/g, '""')}"`,
-      `"${o.proposedDate}"`,
-      `"${o.status}"`
+      o.tutor,
+      o.pet,
+      o.species,
+      o.phone,
+      o.service,
+      o.opportunityType,
+      o.notes,
+      o.proposedDate,
+      o.status,
     ]);
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `oportunidades_medivet_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsvFile(
+      `oportunidades_medivet_${new Date().toISOString().split('T')[0]}.csv`,
+      headers,
+      rows
+    );
     showToast('📥 Reporte CSV descargado con éxito');
   };
 

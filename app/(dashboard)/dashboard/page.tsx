@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { obtenerMetricasDashboard, MetricasDashboard } from '@/lib/db';
+import { downloadCsvFile } from '@/lib/csv';
 import { isSupabaseConfigured } from '@/lib/supabaseClient';
 
 export default function DashboardPage() {
@@ -81,24 +82,20 @@ export default function DashboardPage() {
   const handleExportExcel = () => {
     const headers = ['Indicador_Clave', 'Valor', 'Detalle_Clinico', 'Meta'];
     const rows = [
-      ['1. Oportunidades Identificadas', metrics.total_identificadas.toString(), 'Total de casos capturados en recepción', 'N/A'],
-      ['2. Oportunidades Gestionadas', metrics.total_gestionadas.toString(), `${((metrics.total_gestionadas / (metrics.total_identificadas || 1)) * 100).toFixed(1)}% de tasa de contacto activo`, '70%'],
-      ['3. Citas Generadas', metrics.citas_generadas.toString(), `${((metrics.citas_generadas / (metrics.total_identificadas || 1)) * 100).toFixed(1)}% de conversión a agenda`, '30%'],
-      ['4. Consultas Concretadas', metrics.consultas_concretadas.toString(), 'Pacientes que asistieron a consulta médica', '25%'],
-      ['5. Pacientes Recuperados', metrics.pacientes_recuperados.toString(), 'Recuperados tras inasistencia o cancelación', '15'],
-      ['6. Consultas Medicina General', metrics.consultas_general.toString(), 'Consultas de medicina general cerradas', 'N/A'],
-      ['7. Consultas Medicina Interna', metrics.consultas_interna.toString(), 'Consultas de medicina interna / derivaciones', 'N/A'],
+      ['1. Oportunidades Identificadas', metrics.total_identificadas, 'Total de casos capturados en recepción', 'N/A'],
+      ['2. Oportunidades Gestionadas', metrics.total_gestionadas, `${((metrics.total_gestionadas / (metrics.total_identificadas || 1)) * 100).toFixed(1)}% de tasa de contacto activo`, '70%'],
+      ['3. Citas Generadas', metrics.citas_generadas, `${((metrics.citas_generadas / (metrics.total_identificadas || 1)) * 100).toFixed(1)}% de conversión a agenda`, '30%'],
+      ['4. Consultas Concretadas', metrics.consultas_concretadas, 'Pacientes que asistieron a consulta médica', '25%'],
+      ['5. Pacientes Recuperados', metrics.pacientes_recuperados, 'Recuperados tras inasistencia o cancelación', '15'],
+      ['6. Consultas Medicina General', metrics.consultas_general, 'Consultas de medicina general cerradas', 'N/A'],
+      ['7. Consultas Medicina Interna', metrics.consultas_interna, 'Consultas de medicina interna / derivaciones', 'N/A'],
     ];
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `medivet_metricas_grado_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsvFile(
+      `medivet_metricas_grado_${new Date().toISOString().split('T')[0]}.csv`,
+      headers,
+      rows
+    );
     showToast('📥 Reporte de métricas exportado a Excel (CSV)');
   };
 

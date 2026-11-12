@@ -65,27 +65,42 @@ EXECUTE FUNCTION public.actualizar_fecha_modificacion();
 ALTER TABLE public.pacientes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.oportunidades ENABLE ROW LEVEL SECURITY;
 
--- Políticas de acceso para la clave anónima (anon / public) en el Ultra-MVP
-CREATE POLICY "Permitir lectura publica de pacientes" ON public.pacientes
-    FOR SELECT TO anon, authenticated USING (true);
+-- Eliminar políticas públicas previas si existen (para evitar acceso anónimo sin login)
+DROP POLICY IF EXISTS "Permitir lectura publica de pacientes" ON public.pacientes;
+DROP POLICY IF EXISTS "Permitir insercion publica de pacientes" ON public.pacientes;
+DROP POLICY IF EXISTS "Permitir actualizacion publica de pacientes" ON public.pacientes;
+DROP POLICY IF EXISTS "Permitir lectura publica de oportunidades" ON public.oportunidades;
+DROP POLICY IF EXISTS "Permitir insercion publica de oportunidades" ON public.oportunidades;
+DROP POLICY IF EXISTS "Permitir actualizacion publica de oportunidades" ON public.oportunidades;
 
-CREATE POLICY "Permitir insercion publica de pacientes" ON public.pacientes
-    FOR INSERT TO anon, authenticated WITH CHECK (true);
+-- Políticas restringidas únicamente a usuarios autenticados mediante Supabase Auth
+DROP POLICY IF EXISTS "Permitir lectura autenticada de pacientes" ON public.pacientes;
+CREATE POLICY "Permitir lectura autenticada de pacientes" ON public.pacientes
+    FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Permitir actualizacion publica de pacientes" ON public.pacientes
-    FOR UPDATE TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir insercion autenticada de pacientes" ON public.pacientes;
+CREATE POLICY "Permitir insercion autenticada de pacientes" ON public.pacientes
+    FOR INSERT TO authenticated WITH CHECK (true);
 
-CREATE POLICY "Permitir lectura publica de oportunidades" ON public.oportunidades
-    FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir actualizacion autenticada de pacientes" ON public.pacientes;
+CREATE POLICY "Permitir actualizacion autenticada de pacientes" ON public.pacientes
+    FOR UPDATE TO authenticated USING (true);
 
-CREATE POLICY "Permitir insercion publica de oportunidades" ON public.oportunidades
-    FOR INSERT TO anon, authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir lectura autenticada de oportunidades" ON public.oportunidades;
+CREATE POLICY "Permitir lectura autenticada de oportunidades" ON public.oportunidades
+    FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Permitir actualizacion publica de oportunidades" ON public.oportunidades
-    FOR UPDATE TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir insercion autenticada de oportunidades" ON public.oportunidades;
+CREATE POLICY "Permitir insercion autenticada de oportunidades" ON public.oportunidades
+    FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir actualizacion autenticada de oportunidades" ON public.oportunidades;
+CREATE POLICY "Permitir actualizacion autenticada de oportunidades" ON public.oportunidades
+    FOR UPDATE TO authenticated USING (true);
 
 -- 6. VISTA OFICIAL DE LOS 7 KPIS PARA EL PLAN DE MEJORAMIENTO (GRADO MVZ)
-CREATE OR REPLACE VIEW public.vista_metricas_dashboard AS
+CREATE OR REPLACE VIEW public.vista_metricas_dashboard
+WITH (security_invoker = true) AS
 SELECT
     COUNT(*) AS total_identificadas,
     COUNT(*) FILTER (WHERE estado != 'Pendiente') AS total_gestionadas,
@@ -98,3 +113,7 @@ SELECT
     COUNT(*) FILTER (WHERE estado = 'Consulta Concretada' AND servicio_interes = 'Medicina General') AS consultas_general,
     COUNT(*) FILTER (WHERE estado = 'Consulta Concretada' AND servicio_interes = 'Medicina Interna') AS consultas_interna
 FROM public.oportunidades;
+
+REVOKE ALL ON public.vista_metricas_dashboard FROM PUBLIC;
+REVOKE ALL ON public.vista_metricas_dashboard FROM anon;
+GRANT SELECT ON public.vista_metricas_dashboard TO authenticated;

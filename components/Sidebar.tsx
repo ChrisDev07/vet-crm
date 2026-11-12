@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { clearActiveShift, getShiftMetadata, useActiveShift } from '@/lib/shift';
+import { signOutUser, useAuthSession } from '@/lib/auth';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -12,13 +12,13 @@ interface SidebarProps {
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const activeShift = useActiveShift();
-  const shiftMeta = getShiftMetadata(activeShift);
+  const { session } = useAuthSession();
+  const userEmail = session?.user?.email || 'Usuario autenticado';
 
-  const handleLogout = () => {
-    clearActiveShift();
+  const handleLogout = async () => {
+    await signOutUser();
     onClose?.();
-    router.push('/login');
+    router.replace('/login');
   };
 
   const getLinkClass = (path: string) => {
@@ -84,18 +84,21 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         <div className="flex items-center justify-between gap-space-sm">
           <div className="flex items-center gap-space-sm min-w-0">
             <div className="w-9 h-9 rounded-full bg-primary/12 text-primary ring-2 ring-primary-fixed flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[19px]">{shiftMeta.icon}</span>
+              <span className="material-symbols-outlined text-[19px]">verified_user</span>
             </div>
             <div className="flex flex-col min-w-0">
               <span className="font-label-md text-label-md text-on-surface font-semibold truncate">Recepción MEDIVET</span>
-              <span className="font-body-sm text-body-sm text-primary font-medium truncate">{shiftMeta.label}</span>
+              <span className="font-body-sm text-body-sm text-primary font-medium truncate" title={userEmail}>
+                {userEmail}
+              </span>
             </div>
           </div>
           <button
             onClick={handleLogout}
             className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container transition-all flex items-center justify-center shrink-0"
-            title="Cambiar turno / Cerrar sesión"
+            title="Cerrar sesión"
             type="button"
+            aria-label="Cerrar sesión"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
           </button>

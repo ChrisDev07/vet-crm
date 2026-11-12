@@ -30,8 +30,8 @@ Su propósito es evitar la pérdida de pacientes por dudas de precios, horarios 
   7. **Consultas Medicina Interna**
 * **📥 Exportación a Excel / CSV (RF-04):**
   Descarga directa tanto de la base de oportunidades como del resumen de KPIs en formato `.csv` con codificación `UTF-8 BOM` lista para Microsoft Excel.
-* **🛡️ Control de Turno / ShiftGuard (`/login` — RF-05):**
-  Selección rápida de turno laboral (*Turno Mañana* / *Turno Tarde*) persistida en el navegador, visible en la barra lateral y en inicio, con protección de acceso a las rutas del panel clínico y navegación adaptable para PC y tablet.
+* **🛡️ Autenticación Real y RLS (`/login` — Seguridad):**
+  Inicio de sesión obligatorio con correo y contraseña mediante **Supabase Authentication** ([`AuthGuard.tsx`](./components/AuthGuard.tsx)), políticas RLS restringidas únicamente al rol `authenticated`, cabeceras HTTP de seguridad en [`next.config.ts`](./next.config.ts) y navegación adaptable para PC y tablet.
 * **🔎 Buscador Global tipo Spotlight (`Ctrl+K`):**
   Acceso rápido desde la barra superior para localizar tutores, pacientes o teléfonos en Supabase y saltar directamente a su seguimiento en `/gestion`.
 * **🗄️ Persistencia Real en la Nube:**
@@ -60,19 +60,20 @@ vet-crm/
 │   │   ├── dashboard/page.tsx   # Tablero de 7 KPIs y exportación de métricas
 │   │   ├── gestion/page.tsx     # Bandeja de seguimiento, filtros y exportación CSV
 │   │   ├── registro/page.tsx    # Vista de captura de oportunidades
-│   │   ├── layout.tsx           # Layout con Sidebar, Topbar y ShiftGuard
+│   │   ├── layout.tsx           # Layout con Sidebar, Topbar y AuthGuard
 │   │   └── page.tsx             # Pantalla de inicio y accesos rápidos
-│   ├── login/page.tsx           # Selección de turno de recepción
+│   ├── login/page.tsx           # Inicio de sesión con Supabase Auth
 │   ├── globals.css              # Design tokens y estilos Tailwind v4
 │   └── layout.tsx               # Root layout y fuentes
 ├── components/
+│   ├── AuthGuard.tsx            # Protección de rutas autenticadas
 │   ├── DashboardShell.tsx       # Contenedor responsivo con drawer lateral y Topbar
-│   ├── ShiftGuard.tsx           # Guardia de turno activo
-│   ├── Sidebar.tsx              # Navegación lateral, turno activo y cierre de sesión
+│   ├── Sidebar.tsx              # Navegación lateral, usuario autenticado y cierre de sesión
 │   └── Topbar.tsx               # Buscador global Spotlight y notificaciones reales
 ├── lib/
+│   ├── auth.ts                  # Hooks y helpers de sesión con Supabase Auth
+│   ├── csv.ts                   # Exportación CSV segura contra inyección de fórmulas
 │   ├── db.ts                    # Capa CRUD y consultas a Supabase
-│   ├── shift.ts                 # Gestión reactiva del turno activo en localStorage
 │   └── supabaseClient.ts        # Cliente Supabase y detector de configuración
 ├── supabase_schema.sql          # Esquema oficial PostgreSQL (tablas, índices, RLS y vista)
 ├── .env.local.example           # Plantilla de variables de entorno
@@ -86,8 +87,9 @@ vet-crm/
 
 1. Crea un proyecto gratuito en **[supabase.com](https://supabase.com)**.
 2. Ve al **SQL Editor** dentro de tu proyecto y ejecuta el contenido completo del archivo [`supabase_schema.sql`](./supabase_schema.sql).
-   * Esto creará las tablas limpias `pacientes` y `oportunidades`, los índices, el trigger de actualización, las políticas RLS y la vista `vista_metricas_dashboard`.
-3. Ve a **Project Settings → API Keys** y copia tu **Project URL** y tu **Anon / Publishable Key**.
+   * Esto creará las tablas limpias `pacientes` y `oportunidades`, los índices, el trigger de actualización, las políticas RLS restringidas a usuarios autenticados (`authenticated`) y la vista `vista_metricas_dashboard`.
+3. Crea los usuarios autorizados en **Authentication → Users → Add user → Create new user** (con *Auto Confirm User* activado).
+4. Ve a **Project Settings → API Keys** y copia tu **Project URL** y tu **Anon / Publishable Key**.
 
 ---
 

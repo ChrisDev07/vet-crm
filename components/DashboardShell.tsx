@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import ShiftGuard from '@/components/ShiftGuard';
+import AuthGuard from '@/components/AuthGuard';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 
@@ -19,7 +19,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, []);
 
   return (
-    <ShiftGuard>
+    <AuthGuard>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       {isSidebarOpen && (
         <div
@@ -32,6 +32,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
         {children}
       </div>
-    </ShiftGuard>
+    </AuthGuard>
   );
 }
